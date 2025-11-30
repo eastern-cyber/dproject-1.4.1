@@ -1,0 +1,69 @@
+.timeline {
+    position: relative;
+    margin: 20px 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .timeline::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    width: 4px;
+    background: #eb1c24;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  .timeline-item {
+    position: relative;
+    margin: 20px 25px;
+    width: 50%;
+    padding: 10px 10px;
+    background: #2f2f2f;
+    border: 1px solid #aaaaaa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .timeline-item:nth-child(odd) {
+    align-self: flex-start;
+    right: 30px;
+  }
+  
+  .timeline-item:nth-child(even) {
+    align-self: flex-end;
+    left: 30px;
+  }
+  
+  .timeline-item::before {
+    content: "";
+    position: absolute;
+    top: 25px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border: 7px solid #eb1c24;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
+  }
+  
+  .timeline-item:nth-child(odd)::before {
+    right: -16px;
+  }
+  
+  .timeline-item:nth-child(even)::before {
+    left: -16px;
+  }
+  
+  .timeline-content {
+    position: relative;
+    padding: 10px 15px;
+  }
+  

@@ -1,0 +1,61 @@
+{
+  "name": "neon-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:init": "npx tsx scripts/init-db.ts",
+    "db:reset": "npx tsx scripts/reset-db.ts",
+    "db:import:production": "npx tsx scripts/import-production-users.ts",
+    "db:import:prod:force": "DATABASE_URL=\"your-production-connection\" npx tsx scripts/import-production-users.ts",
+    "db:recreate:exact": "npx tsx scripts/recreate-exact-table.ts",
+    "db:import:exact": "npx tsx scripts/import-exact-production.ts",
+    "db:setup:production": "npm run db:recreate:exact && npm run db:import:exact",
+    "db:import:corrected": "npx tsx scripts/import-corrected-production.ts",
+    "db:setup:corrected": "npm run db:recreate:exact && npm run db:import:corrected",
+    "import-dproject-users": "node import-dproject-users.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "@thirdweb-dev/sdk": "^4.0.99",
+    "axios": "^1.11.0",
+    "chart.js": "^4.5.0",
+    "lucide-react": "^0.542.0",
+    "next": "15.5.2",
+    "pg": "^8.16.3",
+    "pino-pretty": "^13.1.1",
+    "postgres": "^3.4.7",
+    "react": "19.1.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "19.1.0",
+    "recharts": "^3.1.2",
+    "thirdweb": "^5.105.40"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "20.19.12",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "dotenv": "^17.2.1",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.2",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.5",
+    "typescript": "^5"
+  },
+  "compilerOptions": {
+    "paths": {
+      "baseUrl": ".",
+      "@public/*": [
+        "./public/*"
+      ],
+      "@lib/*": [
+        "./src/lib/*"
+      ]
+    }
+  }
+}
