@@ -23,7 +23,7 @@ export default function Footer() {
               <b>D</b>Project<br /> <b>F</b>inancial<br /> <b>I</b>novation<br />
             </p>
             </div>
-            <p className="mt-3 text-[14px] text-gray-500">Version 1.3.1</p>
+            <p className="mt-3 text-[14px] text-gray-500">Version 1.4.0</p>
           </div>
 
           {/* Navigation Links */}
