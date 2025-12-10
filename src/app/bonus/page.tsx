@@ -1,9 +1,10 @@
 // src/app/bonus/page.tsx
 
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import debounce from 'lodash/debounce';
 
 interface BonusUser {
   id: number;
@@ -46,11 +47,11 @@ export default function BonusPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  // Changed default sort field to token_id
   const [sortField, setSortField] = useState<SortField>('token_id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedUser, setSelectedUser] = useState<BonusUser | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -62,24 +63,38 @@ export default function BonusPage() {
   const fetchBonusData = async (page: number = 1, search: string = '') => {
     try {
       setLoading(true);
+      setIsSearching(search !== '');
       setError(null);
       
       const params = new URLSearchParams({
         page: page.toString(),
         limit: itemsPerPage.toString(),
-        ...(search && { search })
       });
+      
+      // Only add search parameter if it's not empty
+      if (search && search.trim() !== '') {
+        params.append('search', search.trim());
+      }
 
       const response = await fetch(`/api/bonus?${params}`);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || errorData.details || `HTTP error! status: ${response.status}`
-        );
+        // Try to get error message from response
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.details || errorData.message || errorMessage;
+        } catch {
+          // If response is not JSON, use default message
+        }
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
+      
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format from server');
+      }
       
       setBonusUsers(Array.isArray(data.data) ? data.data : []);
       
@@ -93,17 +108,34 @@ export default function BonusPage() {
       
     } catch (error) {
       console.error('Error fetching bonus data:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch bonus data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch bonus data';
+      setError(errorMessage);
       setBonusUsers([]);
+      setPagination({
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: 0,
+        hasNext: false,
+        hasPrev: false
+      });
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
+  // Debounced search to prevent too many API calls
+  const debouncedSearch = useCallback(
+    debounce((term: string) => {
+      setPagination(prev => ({ ...prev, currentPage: 1 }));
+      fetchBonusData(1, term);
+    }, 500),
+    []
+  );
+
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
-    fetchBonusData(1, term);
+    debouncedSearch(term);
   };
 
   const handleSort = (field: SortField) => {
@@ -111,7 +143,7 @@ export default function BonusPage() {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection('asc'); // Default to ascending when changing sort field
+      setSortDirection('asc');
     }
   };
 
@@ -138,7 +170,6 @@ export default function BonusPage() {
         if (isNaN(aValue as number)) aValue = 0;
         if (isNaN(bValue as number)) bValue = 0;
         
-        // Numeric comparison
         if (sortDirection === 'asc') {
           return (aValue as number) - (bValue as number);
         } else {
@@ -146,7 +177,6 @@ export default function BonusPage() {
         }
       }
       
-      // Handle string comparison for text fields (token_id, user_id, name, email)
       const aStr = String(aValue).toLowerCase();
       const bStr = String(bValue).toLowerCase();
       
@@ -234,7 +264,9 @@ export default function BonusPage() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">
-        <Link href="/">Bonus Distribution Dashboard</Link>
+        <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+          Bonus Distribution Dashboard
+        </Link>
       </h1>
 
       {error && (
@@ -243,7 +275,7 @@ export default function BonusPage() {
           <span className="block sm:inline">{error}</span>
           <button
             onClick={() => fetchBonusData()}
-            className="ml-4 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+            className="ml-4 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
           >
             Retry
           </button>
@@ -293,28 +325,48 @@ export default function BonusPage() {
       {/* Search */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <input
               type="text"
               placeholder="Search by Token ID, Name, Email, or Wallet Address..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white pr-10"
             />
+            {(isSearching || loading) && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600 dark:text-gray-300">Total:</span>
             <span className="font-medium">{pagination.totalCount} users</span>
           </div>
         </div>
+        {searchTerm && (
+          <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+            Searching for: "{searchTerm}"
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                fetchBonusData(1);
+              }}
+              className="ml-2 text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Clear search
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Bonus Table */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6">
         <h2 className="text-xl font-semibold mb-4">Bonus Distribution</h2>
         
-        {loading && (
+        {loading && !isSearching && (
           <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
             <p className="text-gray-500 dark:text-gray-400">Loading bonus data...</p>
           </div>
         )}
@@ -326,7 +378,7 @@ export default function BonusPage() {
             </p>
             <button
               onClick={() => fetchBonusData()}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
             >
               Refresh
             </button>
@@ -340,64 +392,109 @@ export default function BonusPage() {
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-700">
                     <th 
-                      className="px-4 py-2 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('token_id')}
                     >
-                      Token ID {sortField === 'token_id' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-1">
+                        Token ID
+                        {sortField === 'token_id' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('user_id')}
                     >
-                      Wallet Address {sortField === 'user_id' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-1">
+                        Wallet Address
+                        {sortField === 'user_id' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('name')}
                     >
-                      Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-1">
+                        Name
+                        {sortField === 'name' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('email')}
                     >
-                      Email {sortField === 'email' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-1">
+                        Email
+                        {sortField === 'email' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
                     </th>
                     <th 
-                      className="w-12 px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('pr_a')}
                     >
-                      PR PlanA {sortField === 'pr_a' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-1">
+                        PR PlanA
+                        {sortField === 'pr_a' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
                     </th>
                     <th 
-                      className="w-12 px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('pr_b')}
                     >
-                      PR PlanB {sortField === 'pr_b' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-1">
+                        PR PlanB
+                        {sortField === 'pr_b' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('cr')}
                     >
-                      CR {sortField === 'cr' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-1">
+                        CR
+                        {sortField === 'cr' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('rt')}
                     >
-                      RT {sortField === 'rt' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-1">
+                        RT
+                        {sortField === 'rt' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('ar')}
                     >
-                      AR {sortField === 'ar' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <div className="flex items-center gap-1">
+                        AR
+                        {sortField === 'ar' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedUsers.map((user) => (
-                    <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600">
+                    <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 transition-colors">
                       <td className="px-4 py-2">
                         <button
                           onClick={() => setSelectedUser(user)}
@@ -406,7 +503,9 @@ export default function BonusPage() {
                           {user.token_id || 'N/A'}
                         </button>
                       </td>
-                      <td className="px-4 py-2 font-mono text-sm">{user.user_id}</td>
+                      <td className="px-4 py-2 font-mono text-sm">
+                        {user.user_id}
+                      </td>
                       <td className="px-4 py-2">{user.name || 'N/A'}</td>
                       <td className="px-4 py-2">{user.email || 'N/A'}</td>
                       <td className="px-4 py-2 text-right">{formatNumber(user.pr_a)}</td>
@@ -429,14 +528,14 @@ export default function BonusPage() {
                   <button
                     onClick={() => handlePageChange(1)}
                     disabled={pagination.currentPage === 1}
-                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     &lt;&lt;
                   </button>
                   <button
                     onClick={() => handlePageChange(pagination.currentPage - 1)}
                     disabled={pagination.currentPage === 1}
-                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     &lt;
                   </button>
@@ -447,7 +546,7 @@ export default function BonusPage() {
                       <button
                         key={page}
                         onClick={() => handlePageChange(page)}
-                        className={`px-3 py-1 rounded-md text-sm ${
+                        className={`px-3 py-1 rounded-md text-sm transition-colors ${
                           pagination.currentPage === page
                             ? 'bg-blue-600 text-white'
                             : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -461,14 +560,14 @@ export default function BonusPage() {
                   <button
                     onClick={() => handlePageChange(pagination.currentPage + 1)}
                     disabled={pagination.currentPage === pagination.totalPages}
-                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     &gt;
                   </button>
                   <button
                     onClick={() => handlePageChange(pagination.totalPages)}
                     disabled={pagination.currentPage === pagination.totalPages}
-                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     &gt;&gt;
                   </button>
@@ -488,7 +587,7 @@ export default function BonusPage() {
                 <h2 className="text-2xl font-bold">Bonus Details</h2>
                 <button
                   onClick={() => setSelectedUser(null)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
                 >
                   ✕
                 </button>
@@ -497,14 +596,14 @@ export default function BonusPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h3 className="font-semibold mb-3">User Information</h3>
-                  <dl className="space-y-2">
+                  <dl className="space-y-3">
                     <div>
                       <dt className="text-sm text-gray-500 dark:text-gray-400">Token ID</dt>
-                      <dd className="text-sm">{selectedUser.token_id || 'N/A'}</dd>
+                      <dd className="text-sm font-medium">{selectedUser.token_id || 'N/A'}</dd>
                     </div>
                     <div>
                       <dt className="text-sm text-gray-500 dark:text-gray-400">Wallet Address</dt>
-                      <dd className="text-sm font-mono">{selectedUser.user_id}</dd>
+                      <dd className="text-sm font-mono break-all">{selectedUser.user_id}</dd>
                     </div>
                     <div>
                       <dt className="text-sm text-gray-500 dark:text-gray-400">Name</dt>
@@ -519,7 +618,7 @@ export default function BonusPage() {
                 
                 <div>
                   <h3 className="font-semibold mb-3">Bonus Details</h3>
-                  <dl className="space-y-2">
+                  <dl className="space-y-3">
                     <div>
                       <dt className="text-sm text-gray-500 dark:text-gray-400">PR Plan A</dt>
                       <dd className="text-sm">{formatNumber(selectedUser.pr_a)}</dd>
@@ -552,6 +651,15 @@ export default function BonusPage() {
                     </div>
                   </dl>
                 </div>
+              </div>
+              
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
