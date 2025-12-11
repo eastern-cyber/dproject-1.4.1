@@ -190,20 +190,20 @@ export default function BonusPage() {
   }, [bonusUsers, sortField, sortDirection]);
 
   const formatNumber = (value: number | string | null | undefined): string => {
-    if (value === null || value === undefined) return '0.0000';
+    if (value === null || value === undefined) return '0.00';
     
     try {
       const numValue = typeof value === 'string' ? parseFloat(value) : value;
       
-      if (isNaN(numValue) || !isFinite(numValue)) return '0.0000';
+      if (isNaN(numValue) || !isFinite(numValue)) return '0.00';
       
       // Use toLocaleString with 4 decimal places for bonus fields
       return numValue.toLocaleString('en-US', {
-        minimumFractionDigits: 4,
-        maximumFractionDigits: 4
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
       });
     } catch (error) {
-      return '0.0000';
+      return '0.00';
     }
   };
 
@@ -556,19 +556,19 @@ export default function BonusPage() {
                     
                     // Helper function to format bonus table numbers (4 decimal places for individual bonuses)
                     const formatBonusNumber = (value: number | string | null | undefined): string => {
-                      if (value === null || value === undefined) return '0.0000';
+                      if (value === null || value === undefined) return '0.00';
                       
                       try {
                         const numValue = typeof value === 'string' ? parseFloat(value) : value;
                         
-                        if (isNaN(numValue) || !isFinite(numValue)) return '0.0000';
+                        if (isNaN(numValue) || !isFinite(numValue)) return '0.00';
                         
                         return numValue.toLocaleString('en-US', {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
                         });
                       } catch (error) {
-                        return '0.0000';
+                        return '0.00';
                       }
                     };
                     
