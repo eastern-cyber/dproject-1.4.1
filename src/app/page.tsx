@@ -109,7 +109,7 @@ function Header() {
         <span className="inline-block -skew-x-6 text-gray-500"> Register </span>
       </p>
       <p className="text-xl text-center text-zinc-400 mb-6">
-        Version 1.4.0
+        Version 1.4.1
       </p>
       <p className="text-center text-zinc-500 text-base mb-8 max-w-2xl px-4">
         ล็อกอินด้วยอีเมลล์{" "}
