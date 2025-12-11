@@ -9,11 +9,12 @@ import debounce from 'lodash/debounce';
 interface BonusUser {
   id: number;
   user_id: string;
-  pr_a: number | string;
-  pr_b: number | string;
+  pr: number | string;  // Changed from pr_a, pr_b
   cr: number | string;
   rt: number | string;
   ar: number | string;
+  used_for_d1: number | string;  // New field
+  last_used_at: string | null;   // New field
   token_id: string | null;
   name: string | null;
   email: string | null;
@@ -32,7 +33,7 @@ interface Pagination {
   hasPrev: boolean;
 }
 
-type SortField = 'token_id' | 'user_id' | 'name' | 'email' | 'ar' | 'cr' | 'rt' | 'pr_a' | 'pr_b';
+type SortField = 'token_id' | 'user_id' | 'name' | 'email' | 'ar' | 'cr' | 'rt' | 'pr' | 'used_for_d1';
 type SortDirection = 'asc' | 'desc';
 
 export default function BonusPage() {
@@ -163,7 +164,7 @@ export default function BonusPage() {
       if (bValue === null || bValue === undefined) bValue = '';
       
       // Handle numeric fields
-      if (['pr_a', 'pr_b', 'cr', 'rt', 'ar'].includes(sortField)) {
+      if (['pr', 'cr', 'rt', 'ar', 'used_for_d1'].includes(sortField)) {
         aValue = typeof aValue === 'string' ? parseFloat(aValue) : aValue;
         bValue = typeof bValue === 'string' ? parseFloat(bValue) : bValue;
         
@@ -219,19 +220,24 @@ export default function BonusPage() {
     }
   };
 
-  const totalPR_A = useMemo(() => {
-    const usersArray = Array.isArray(bonusUsers) ? bonusUsers : [];
-    return usersArray.reduce((sum, user) => {
-      const pr_aValue = typeof user.pr_a === 'string' ? parseFloat(user.pr_a) : user.pr_a;
-      return sum + (pr_aValue || 0);
-    }, 0);
-  }, [bonusUsers]);
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
-  const totalPR_B = useMemo(() => {
+  const totalPR = useMemo(() => {
     const usersArray = Array.isArray(bonusUsers) ? bonusUsers : [];
     return usersArray.reduce((sum, user) => {
-      const pr_bValue = typeof user.pr_b === 'string' ? parseFloat(user.pr_b) : user.pr_b;
-      return sum + (pr_bValue || 0);
+      const prValue = typeof user.pr === 'string' ? parseFloat(user.pr) : user.pr;
+      return sum + (prValue || 0);
     }, 0);
   }, [bonusUsers]);
 
@@ -256,6 +262,14 @@ export default function BonusPage() {
     return usersArray.reduce((sum, user) => {
       const arValue = typeof user.ar === 'string' ? parseFloat(user.ar) : user.ar;
       return sum + (arValue || 0);
+    }, 0);
+  }, [bonusUsers]);
+
+  const totalUsedForD1 = useMemo(() => {
+    const usersArray = Array.isArray(bonusUsers) ? bonusUsers : [];
+    return usersArray.reduce((sum, user) => {
+      const d1Value = typeof user.used_for_d1 === 'string' ? parseFloat(user.used_for_d1) : user.used_for_d1;
+      return sum + (d1Value || 0);
     }, 0);
   }, [bonusUsers]);
 
@@ -291,15 +305,9 @@ export default function BonusPage() {
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-2">Total <br /> PR Bonus <br /> Plan A</h2>
+          <h2 className="text-xl font-semibold mb-2">Total <br /> PR Bonus</h2>
           <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-            {formatCurrency(totalPR_A)}
-          </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-2">Total <br /> PR Bonus <br /> Plan B</h2>
-          <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
-            {formatCurrency(totalPR_B)}
+            {formatCurrency(totalPR)}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
@@ -318,6 +326,12 @@ export default function BonusPage() {
           <h2 className="text-xl font-semibold mb-2">Total AR <br /> AutoRun Bonus</h2>
           <p className="text-3xl font-bold text-green-600 dark:text-green-400">
             {formatCurrency(totalAR)}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-2">Total Used <br /> for D1</h2>
+          <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+            {formatCurrency(totalUsedForD1)}
           </p>
         </div>
       </div>
@@ -437,22 +451,11 @@ export default function BonusPage() {
                     </th>
                     <th 
                       className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                      onClick={() => handleSort('pr_a')}
+                      onClick={() => handleSort('pr')}
                     >
                       <div className="flex items-center gap-1">
-                        PR PlanA
-                        {sortField === 'pr_a' && (
-                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                      onClick={() => handleSort('pr_b')}
-                    >
-                      <div className="flex items-center gap-1">
-                        PR PlanB
-                        {sortField === 'pr_b' && (
+                        PR
+                        {sortField === 'pr' && (
                           <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
                         )}
                       </div>
@@ -490,6 +493,17 @@ export default function BonusPage() {
                         )}
                       </div>
                     </th>
+                    <th 
+                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                      onClick={() => handleSort('used_for_d1')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Used for D1
+                        {sortField === 'used_for_d1' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -508,13 +522,13 @@ export default function BonusPage() {
                       </td>
                       <td className="px-4 py-2">{user.name || 'N/A'}</td>
                       <td className="px-4 py-2">{user.email || 'N/A'}</td>
-                      <td className="px-4 py-2 text-right">{formatNumber(user.pr_a)}</td>
-                      <td className="px-4 py-2 text-right">{formatNumber(user.pr_b)}</td>
+                      <td className="px-4 py-2 text-right">{formatNumber(user.pr)}</td>
                       <td className="px-4 py-2 text-right">{formatNumber(user.cr)}</td>
                       <td className="px-4 py-2 text-right">{formatNumber(user.rt)}</td>
                       <td className="px-4 py-2 text-right font-semibold text-green-600 dark:text-green-400">
                         {formatNumber(user.ar)}
                       </td>
+                      <td className="px-4 py-2 text-right">{formatNumber(user.used_for_d1)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -613,6 +627,10 @@ export default function BonusPage() {
                       <dt className="text-sm text-gray-500 dark:text-gray-400">Email</dt>
                       <dd className="text-sm">{selectedUser.email || 'N/A'}</dd>
                     </div>
+                    <div>
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">Referrer ID</dt>
+                      <dd className="text-sm">{selectedUser.referrer_id || 'N/A'}</dd>
+                    </div>
                   </dl>
                 </div>
                 
@@ -620,30 +638,36 @@ export default function BonusPage() {
                   <h3 className="font-semibold mb-3">Bonus Details</h3>
                   <dl className="space-y-3">
                     <div>
-                      <dt className="text-sm text-gray-500 dark:text-gray-400">PR Plan A</dt>
-                      <dd className="text-sm">{formatNumber(selectedUser.pr_a)}</dd>
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">PR Bonus</dt>
+                      <dd className="text-sm">{formatNumber(selectedUser.pr)}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm text-gray-500 dark:text-gray-400">PR Plan B</dt>
-                      <dd className="text-sm">{formatNumber(selectedUser.pr_b)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm text-gray-500 dark:text-gray-400">CR</dt>
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">CR Bonus</dt>
                       <dd className="text-sm">{formatNumber(selectedUser.cr)}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm text-gray-500 dark:text-gray-400">RT</dt>
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">RT Bonus</dt>
                       <dd className="text-sm">{formatNumber(selectedUser.rt)}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm text-gray-500 dark:text-gray-400">AR</dt>
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">AR Bonus</dt>
                       <dd className="text-sm font-semibold text-green-600 dark:text-green-400">
                         {formatNumber(selectedUser.ar)}
                       </dd>
                     </div>
                     <div>
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">Used for D1</dt>
+                      <dd className="text-sm">{formatNumber(selectedUser.used_for_d1)}</dd>
+                    </div>
+                    <div>
                       <dt className="text-sm text-gray-500 dark:text-gray-400">Bonus Date</dt>
-                      <dd className="text-sm">{selectedUser.bonus_date}</dd>
+                      <dd className="text-sm">{formatDate(selectedUser.bonus_date)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">Last Used At</dt>
+                      <dd className="text-sm">
+                        {selectedUser.last_used_at ? formatDate(selectedUser.last_used_at) : 'Never'}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-sm text-gray-500 dark:text-gray-400">Calculated At</dt>

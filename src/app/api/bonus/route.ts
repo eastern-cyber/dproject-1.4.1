@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
         FROM bonus b
         LEFT JOIN users u ON b.user_id = u.user_id
         ${whereClause}
-        ORDER BY b.ar DESC
+        ORDER BY b.ar DESC, b.bonus_date DESC
         LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
       `;
 
