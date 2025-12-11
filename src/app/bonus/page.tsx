@@ -197,7 +197,11 @@ export default function BonusPage() {
       
       if (isNaN(numValue) || !isFinite(numValue)) return '0.0000';
       
-      return numValue.toFixed(4);
+      // Use toLocaleString with 4 decimal places for bonus fields
+      return numValue.toLocaleString('en-US', {
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 4
+      });
     } catch (error) {
       return '0.0000';
     }
@@ -211,6 +215,7 @@ export default function BonusPage() {
       
       if (isNaN(numValue) || !isFinite(numValue)) return '0.00';
       
+      // Use toLocaleString with 2 decimal places and commas for thousands
       return numValue.toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
@@ -450,10 +455,10 @@ export default function BonusPage() {
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                      className="px-4 py-2 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('pr')}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-center gap-1">
                         PR
                         {sortField === 'pr' && (
                           <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -461,10 +466,10 @@ export default function BonusPage() {
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                      className="px-4 py-2 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('cr')}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-center gap-1">
                         CR
                         {sortField === 'cr' && (
                           <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -472,10 +477,10 @@ export default function BonusPage() {
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                      className="px-4 py-2 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('rt')}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-center gap-1">
                         RT
                         {sortField === 'rt' && (
                           <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -483,10 +488,10 @@ export default function BonusPage() {
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                      className="px-4 py-2 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('ar')}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-center gap-1">
                         AR
                         {sortField === 'ar' && (
                           <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
@@ -494,11 +499,32 @@ export default function BonusPage() {
                       </div>
                     </th>
                     <th 
-                      className="px-4 py-2 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                      className="px-4 py-2 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <div className="flex items-center gap-1">
+                        Total Bonus
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-2 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <div className="flex items-center gap-1">
+                        Keep Avatar (10%)
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-2 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <div className="flex items-center gap-1">
+                        Keep D1 (5%)
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-2 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       onClick={() => handleSort('used_for_d1')}
                     >
                       <div className="flex items-center gap-1">
-                        Used for D1
+                        Used D1
                         {sortField === 'used_for_d1' && (
                           <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
                         )}
@@ -507,30 +533,79 @@ export default function BonusPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedUsers.map((user) => (
-                    <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 transition-colors">
-                      <td className="px-4 py-2">
-                        <button
-                          onClick={() => setSelectedUser(user)}
-                          className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer text-left"
-                        >
-                          {user.token_id || 'N/A'}
-                        </button>
-                      </td>
-                      <td className="px-4 py-2 font-mono text-sm">
-                        {user.user_id}
-                      </td>
-                      <td className="px-4 py-2">{user.name || 'N/A'}</td>
-                      <td className="px-4 py-2">{user.email || 'N/A'}</td>
-                      <td className="px-4 py-2 text-right">{formatNumber(user.pr)}</td>
-                      <td className="px-4 py-2 text-right">{formatNumber(user.cr)}</td>
-                      <td className="px-4 py-2 text-right">{formatNumber(user.rt)}</td>
-                      <td className="px-4 py-2 text-right font-semibold text-green-600 dark:text-green-400">
-                        {formatNumber(user.ar)}
-                      </td>
-                      <td className="px-4 py-2 text-right">{formatNumber(user.used_for_d1)}</td>
-                    </tr>
-                  ))}
+                  {sortedUsers.map((user) => {
+                    // Calculate values for each row
+                    const prValue = typeof user.pr === 'string' ? parseFloat(user.pr) : user.pr || 0;
+                    const crValue = typeof user.cr === 'string' ? parseFloat(user.cr) : user.cr || 0;
+                    const rtValue = typeof user.rt === 'string' ? parseFloat(user.rt) : user.rt || 0;
+                    const arValue = typeof user.ar === 'string' ? parseFloat(user.ar) : user.ar || 0;
+                    
+                    const totalBonus = prValue + crValue + rtValue + arValue;
+                    const keepForAvatar = totalBonus * 0.10; // 10%
+                    const keepForD1 = totalBonus * 0.05;     // 5%
+                    
+                    // Helper function to format numbers in xx,xxx.xx format
+                    const formatCurrencyWithCommas = (value: number): string => {
+                      if (isNaN(value) || !isFinite(value)) return '0.00';
+                      
+                      return value.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      });
+                    };
+                    
+                    // Helper function to format bonus table numbers (4 decimal places for individual bonuses)
+                    const formatBonusNumber = (value: number | string | null | undefined): string => {
+                      if (value === null || value === undefined) return '0.0000';
+                      
+                      try {
+                        const numValue = typeof value === 'string' ? parseFloat(value) : value;
+                        
+                        if (isNaN(numValue) || !isFinite(numValue)) return '0.0000';
+                        
+                        return numValue.toLocaleString('en-US', {
+                          minimumFractionDigits: 4,
+                          maximumFractionDigits: 4
+                        });
+                      } catch (error) {
+                        return '0.0000';
+                      }
+                    };
+                    
+                    return (
+                      <tr key={user.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 transition-colors">
+                        <td className="px-4 py-2">
+                          <button
+                            onClick={() => setSelectedUser(user)}
+                            className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer text-left"
+                          >
+                            {user.token_id || 'N/A'}
+                          </button>
+                        </td>
+                        <td className="px-4 py-2 font-mono text-sm">
+                          {user.user_id}
+                        </td>
+                        <td className="px-4 py-2">{user.name || 'N/A'}</td>
+                        <td className="px-4 py-2">{user.email || 'N/A'}</td>
+                        <td className="px-4 py-2 text-right font-mono text-sm">{formatBonusNumber(user.pr)}</td>
+                        <td className="px-4 py-2 text-right font-mono text-sm">{formatBonusNumber(user.cr)}</td>
+                        <td className="px-4 py-2 text-right font-mono text-sm">{formatBonusNumber(user.rt)}</td>
+                        <td className="px-4 py-2 text-right font-mono text-sm font-semibold text-green-600 dark:text-green-400">
+                          {formatBonusNumber(user.ar)}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">
+                          {formatCurrencyWithCommas(totalBonus)}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono text-sm font-semibold text-purple-600 dark:text-purple-400">
+                          {formatCurrencyWithCommas(keepForAvatar)}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                          {formatCurrencyWithCommas(keepForD1)}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono text-sm">{formatBonusNumber(user.used_for_d1)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
