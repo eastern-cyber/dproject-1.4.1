@@ -582,27 +582,27 @@ export default function BonusPage() {
                             {user.token_id || 'N/A'}
                           </button>
                         </td>
-                        <td className="px-4 py-2 font-mono text-sm">
+                        <td className="px-4 py-2 font-mono text-m">
                           {user.user_id}
                         </td>
                         <td className="px-4 py-2">{user.name || 'N/A'}</td>
                         <td className="px-4 py-2">{user.email || 'N/A'}</td>
-                        <td className="px-4 py-2 text-right font-mono text-sm">{formatBonusNumber(user.pr)}</td>
-                        <td className="px-4 py-2 text-right font-mono text-sm">{formatBonusNumber(user.cr)}</td>
-                        <td className="px-4 py-2 text-right font-mono text-sm">{formatBonusNumber(user.rt)}</td>
-                        <td className="px-4 py-2 text-right font-mono text-sm font-semibold text-green-600 dark:text-green-400">
+                        <td className="px-4 py-2 text-right font-mono text-m">{formatBonusNumber(user.pr)}</td>
+                        <td className="px-4 py-2 text-right font-mono text-m">{formatBonusNumber(user.cr)}</td>
+                        <td className="px-4 py-2 text-right font-mono text-m">{formatBonusNumber(user.rt)}</td>
+                        <td className="px-4 py-2 text-right font-mono text-m text-green-600 dark:text-green-400">
                           {formatBonusNumber(user.ar)}
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">
+                        <td className="px-4 py-2 text-right font-mono text-m text-blue-600 dark:text-blue-400">
                           {formatCurrencyWithCommas(totalBonus)}
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-sm font-semibold text-purple-600 dark:text-purple-400">
+                        <td className="px-4 py-2 text-right font-mono text-m text-purple-600 dark:text-purple-400">
                           {formatCurrencyWithCommas(keepForAvatar)}
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                        <td className="px-4 py-2 text-right font-mono text-m text-indigo-600 dark:text-indigo-400">
                           {formatCurrencyWithCommas(keepForD1)}
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-sm">{formatBonusNumber(user.used_for_d1)}</td>
+                        <td className="px-4 py-2 text-right font-mono text-m">{formatBonusNumber(user.used_for_d1)}</td>
                       </tr>
                     );
                   })}
