@@ -53,9 +53,9 @@ interface UserData {
 interface D1Data {
   id: number;
   user_id: string;
-  rate_thb_pol: number | string; // Allow string or number
+  rate_thb_pol: number | string;
   append_pol: number | string;
-  used_bonus_pol: number | string; // Add this
+  used_bonus_pol: number | string;
   append_pol_tx_hash: string | null;
   append_pol_date_time: string | null;
   remark: any | null;
@@ -68,7 +68,7 @@ interface D1Data {
 interface BonusData {
   id: number;
   user_id: string;
-  pr: number;  // Changed from pr_a and pr_b
+  pr: number;
   cr: number;
   rt: number;
   ar: number;
@@ -82,8 +82,8 @@ interface BonusData {
 type TransactionStatus = {
   firstTransaction: boolean;
   secondTransaction: boolean;
-  thirdTransaction: boolean; // KTDFI to member
-  fourthTransaction: boolean; // ADD THIS: KTDFI to referrer
+  thirdTransaction: boolean;
+  fourthTransaction: boolean;
   error?: string;
 };
 
@@ -98,41 +98,37 @@ export default function PlanB() {
   const account = useActiveAccount();
   const router = useRouter();
   
-  // State variables - Following Plan A pattern
+  // State variables
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [d1Data, setD1Data] = useState<D1Data | null>(null);
-  // Add this state near your other state declarations
   const [allD1Data, setAllD1Data] = useState<D1Data[]>([]);
   const [bonusData, setBonusData] = useState<BonusData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Update transaction status
+  // Transaction states
   const [isTransactionComplete, setIsTransactionComplete] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>({
     firstTransaction: false,
     secondTransaction: false,
     thirdTransaction: false,
-    fourthTransaction: false // ADD THIS
+    fourthTransaction: false
   });
   
-  // Modal states - Following Plan A pattern
+  // Modal states
   const [showFirstConfirmationModal, setShowFirstConfirmationModal] = useState(false);
   const [showSecondConfirmationModal, setShowSecondConfirmationModal] = useState(false);
-  const [showThirdConfirmationModal, setShowThirdConfirmationModal] = useState(false); // ADD THIS
-  const [showFourthConfirmationModal, setShowFourthConfirmationModal] = useState(false); // ADD THIS
+  const [showThirdConfirmationModal, setShowThirdConfirmationModal] = useState(false);
+  const [showFourthConfirmationModal, setShowFourthConfirmationModal] = useState(false);
   const [isProcessingFirst, setIsProcessingFirst] = useState(false);
   const [isProcessingSecond, setIsProcessingSecond] = useState(false);
-  const [isProcessingThird, setIsProcessingThird] = useState(false); // ADD THIS
-  const [isProcessingFourth, setIsProcessingFourth] = useState(false); // ADD THIS
+  const [isProcessingThird, setIsProcessingThird] = useState(false);
+  const [isProcessingFourth, setIsProcessingFourth] = useState(false);
 
   // Data states
-  // Add third transaction hash and KTDFI sender
-  // Add fourth transaction hash
   const [firstTxHash, setFirstTxHash] = useState<string>("");
   const [secondTxHash, setSecondTxHash] = useState<string>("");
   const [thirdTxHash, setThirdTxHash] = useState<string>("");
-  const [fourthTxHash, setFourthTxHash] = useState<string>(""); // ADD THIS
+  const [fourthTxHash, setFourthTxHash] = useState<string>("");
   const [polBalance, setPolBalance] = useState<string>("0");
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [adjustedExchangeRate, setAdjustedExchangeRate] = useState<number | null>(null);
@@ -140,25 +136,29 @@ export default function PlanB() {
   const [transactionError, setTransactionError] = useState<string | null>(null);
   const [exchangeRateConfig, setExchangeRateConfig] = useState<ExchangeRateConfig>(DEFAULT_CONFIG);
 
-  // ADD KTDFI SENDER STATE
+  // KTDFI Sender State
   const [ktdfiSenderAccount, setKtdfiSenderAccount] = useState<any>(null);
 
-  // Add this near your other modal states
+  // D1 Details Modal states
   const [showD1DetailsModal, setShowD1DetailsModal] = useState(false);
+  const [currentD1Page, setCurrentD1Page] = useState(1);
+  const [recordsPerPage] = useState(5);
+  const [expandedD1Id, setExpandedD1Id] = useState<number | null>(null);
 
-  // Add this at the beginning of your component function, after state declarations
-  console.log("Component state:", {
-    account: account?.address,
-    userData: !!userData,
-    d1Data: !!d1Data,
-    exchangeRate,
-    adjustedExchangeRate,
-    polBalance,
-    loading,
-    rateLoading
-  });
+  // Debug logging
+  useEffect(() => {
+    console.log("Component state:", {
+      account: account?.address,
+      userData: !!userData,
+      allD1DataCount: allD1Data.length,
+      exchangeRate,
+      adjustedExchangeRate,
+      polBalance,
+      loading,
+      rateLoading
+    });
+  }, [account, userData, allD1Data, exchangeRate, adjustedExchangeRate, polBalance, loading, rateLoading]);
 
-  // Also add a useEffect to log when account changes
   useEffect(() => {
     console.log("Account changed:", account?.address);
   }, [account?.address]);
@@ -169,7 +169,7 @@ export default function PlanB() {
       try {
         setRateLoading(true);
         const response = await fetch(GITHUB_CONFIG_URL, {
-          cache: 'no-store', // Always fetch fresh config
+          cache: 'no-store',
           headers: {
             'Accept': 'application/json',
           }
@@ -181,7 +181,6 @@ export default function PlanB() {
 
         const config: ExchangeRateConfig = await response.json();
         
-        // Validate config values
         const validatedConfig = {
           fallbackExchangeRate: config.fallbackExchangeRate > 0 ? config.fallbackExchangeRate : DEFAULT_CONFIG.fallbackExchangeRate,
           exchangeRateBuffer: config.exchangeRateBuffer >= 0 ? config.exchangeRateBuffer : DEFAULT_CONFIG.exchangeRateBuffer,
@@ -205,7 +204,6 @@ export default function PlanB() {
     const updateExchangeRate = async () => {
       try {
         setRateLoading(true);
-        // Use the configured fallback rate from GitHub
         const currentRate = exchangeRateConfig.fallbackExchangeRate;
         const adjustedRate = Math.max(0.01, currentRate - exchangeRateConfig.exchangeRateBuffer);
         
@@ -215,7 +213,6 @@ export default function PlanB() {
         console.log(`Exchange rate updated: ${currentRate} THB/POL (adjusted: ${adjustedRate})`);
       } catch (err) {
         console.error("Failed to get exchange rate:", err);
-        // Use fallback from config even if there's an error
         const fallbackAdjustedRate = Math.max(
           0.01, 
           exchangeRateConfig.fallbackExchangeRate - exchangeRateConfig.exchangeRateBuffer
@@ -231,14 +228,12 @@ export default function PlanB() {
     if (exchangeRateConfig) {
       updateExchangeRate();
       
-      // Set up interval for refreshing based on config
       const interval = setInterval(updateExchangeRate, exchangeRateConfig.refreshInterval);
       return () => clearInterval(interval);
     }
   }, [exchangeRateConfig]);
 
-  // Fetch user data
-  // In the fetchUserData useEffect, update the D1 fetch section:
+  // Fetch user data and all D1 records
   useEffect(() => {
     const fetchUserData = async () => {
       if (!account?.address) {
@@ -265,45 +260,27 @@ export default function PlanB() {
         const userData = await userResponse.json();
         setUserData(userData);
 
-        // Fetch D1 data - GET ALL D1 RECORDS FOR THE USER
+        // Fetch ALL D1 records for the user
         try {
-          const d1Response = await fetch(`/api/d1?user_id=${account.address}&get_all=true`);
+          const d1Response = await fetch(`/api/d1?user_id=${account.address}&all=true`);
           if (d1Response.ok) {
             const d1DataArray = await d1Response.json();
             
-            // FIX: Check if the response is an empty array (meaning no D1 records)
-            if (Array.isArray(d1DataArray)) {
-              if (d1DataArray.length > 0) {
-                // If we have D1 records, get the latest (highest d1_sequence)
-                const sortedD1Data = d1DataArray.sort((a, b) => 
-                  (b.d1_sequence || 0) - (a.d1_sequence || 0)
-                );
-                setD1Data(sortedD1Data[0]); // Set the latest D1 record
-                
-                // Also store all D1 records for display
-                setAllD1Data(d1DataArray);
-              } else {
-                // FIX: Empty array means no D1 records found
-                setD1Data(null);
-                setAllD1Data([]);
-              }
-            } else if (d1DataArray && typeof d1DataArray === 'object' && !Array.isArray(d1DataArray)) {
-              // Single record (for backward compatibility with old API)
-              setD1Data(d1DataArray);
-              setAllD1Data([d1DataArray]);
+            if (Array.isArray(d1DataArray) && d1DataArray.length > 0) {
+              // Sort by d1_sequence in descending order (newest first)
+              const sortedD1Data = d1DataArray.sort((a: D1Data, b: D1Data) => 
+                (b.d1_sequence || 0) - (a.d1_sequence || 0)
+              );
+              
+              setAllD1Data(sortedD1Data);
             } else {
-              // No data found or invalid response
-              setD1Data(null);
               setAllD1Data([]);
             }
           } else {
-            // API returned error, no D1 data
-            setD1Data(null);
             setAllD1Data([]);
           }
         } catch (d1Error) {
-          console.log('No D1 data found or error fetching:', d1Error);
-          setD1Data(null);
+          console.log('Error fetching D1 data:', d1Error);
           setAllD1Data([]);
         }
 
@@ -327,7 +304,7 @@ export default function PlanB() {
     }
   }, [userData]);
 
-  // Fetch POL balance - Following Plan A pattern
+  // Fetch POL balance
   useEffect(() => {
     const fetchBalance = async () => {
       if (!account) {
@@ -340,7 +317,7 @@ export default function PlanB() {
           contract: getContract({
             client,
             chain: defineChain(polygon),
-            address: "0x0000000000000000000000000000000000001010"
+            address: "0x0000000000000000000000000000000000001010"  // ✅ CORRECT ADDRESS
           }),
           method: {
             type: "function",
@@ -365,7 +342,7 @@ export default function PlanB() {
     }
   }, [account]);
 
-  // ===== ADD KTDFI SENDER INITIALIZATION =====
+  // Initialize KTDFI Sender
   useEffect(() => {
     const initializeKtdfiSender = async () => {
       if (!KTDFI_SENDER_PRIVATE_KEY) {
@@ -390,23 +367,71 @@ export default function PlanB() {
     initializeKtdfiSender();
   }, []);
 
+  // Handle ESC key for modal
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showD1DetailsModal) {
+        setShowD1DetailsModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscKey);
+    
+    return () => {
+      window.removeEventListener('keydown', handleEscKey);
+    };
+  }, [showD1DetailsModal]);
+
   // Helper functions
+  const calculateRemainingBonus = () => {
+    if (!bonusData.length) return 0;
+    
+    const totalBonus = bonusData.reduce((total, bonus) => total + 
+      (Number(bonus.pr) || 0) + 
+      (Number(bonus.cr) || 0) + 
+      (Number(bonus.rt) || 0) + 
+      (Number(bonus.ar) || 0), 0);
+    
+    const netBonus = totalBonus * 0.05;
+    
+    // Calculate total used bonus from all D1 records
+    const totalUsedBonus = allD1Data.reduce((sum, d1) => 
+      sum + (Number(d1.used_bonus_pol) || 0), 0
+    );
+    
+    // Return remaining bonus (can't be negative)
+    return Math.max(0, netBonus - totalUsedBonus);
+  };
+
   const calculateRequiredPolAmount = () => {
     if (!adjustedExchangeRate) return null;
     
     const requiredPolFor800THB = MEMBERSHIP_FEE_THB / adjustedExchangeRate;
-    const netBonusValue = totalBonus * 0.05;
+    const remainingBonus = calculateRemainingBonus();
     
-    // If net bonus covers the full amount, pay only minimum
-    if (netBonusValue >= requiredPolFor800THB) {
+    // If remaining bonus covers the full amount, pay only minimum
+    if (remainingBonus >= requiredPolFor800THB) {
       return MINIMUM_PAYMENT;
     }
     
     // Otherwise, pay the difference
-    return requiredPolFor800THB - netBonusValue;
+    return Math.max(MINIMUM_PAYMENT, requiredPolFor800THB - remainingBonus);
   };
 
-  // Transaction execution - Fixed with better error handling
+  const calculateBonusToUse = () => {
+    if (!adjustedExchangeRate) return 0;
+    
+    const requiredPolFor800THB = MEMBERSHIP_FEE_THB / adjustedExchangeRate;
+    const remainingBonus = calculateRemainingBonus();
+    
+    if (remainingBonus >= requiredPolFor800THB) {
+      return requiredPolFor800THB;
+    }
+    
+    return remainingBonus;
+  };
+
+  // Transaction execution
   const executeTransaction = async (to: string, amountWei: bigint) => {
     try {
       console.log("Preparing transaction:", {
@@ -415,7 +440,6 @@ export default function PlanB() {
         amountPOL: (Number(amountWei) / 10**18).toString()
       });
 
-      // Validate recipient address
       if (!isValidEthereumAddress(to)) {
         return { 
           success: false, 
@@ -430,7 +454,6 @@ export default function PlanB() {
         };
       }
 
-      // Create the transaction - FIXED: Using correct thirdweb syntax
       const transaction = {
         to: to as `0x${string}`,
         value: amountWei,
@@ -452,7 +475,6 @@ export default function PlanB() {
       
       let errorMessage = error.message || "Unknown error";
       
-      // More specific error messages
       if (errorMessage.includes("user rejected") || errorMessage.includes("denied transaction")) {
         errorMessage = "User rejected the transaction";
       } else if (errorMessage.includes("insufficient funds")) {
@@ -469,54 +491,53 @@ export default function PlanB() {
     }
   };
 
-  // ===== ADD checkWalletBalance FUNCTION =====
   const checkWalletBalance = async (requiredAmount: number): Promise<{ sufficient: boolean; balance: string; required: string; error?: string }> => {
-    if (!account) {
-      return {
-        sufficient: false,
-        balance: "0",
-        required: requiredAmount.toString(),
-        error: "No wallet connected"
-      };
-    }
+  if (!account) {
+    return {
+      sufficient: false,
+      balance: "0",
+      required: requiredAmount.toString(),
+      error: "No wallet connected"
+    };
+  }
 
-    try {
-      const balanceResult = await readContract({
-        contract: getContract({
-          client,
-          chain: defineChain(polygon),
-          address: "0x0000000000000000000000000000000000001010"
-        }),
-        method: {
-          type: "function",
-          name: "balanceOf",
-          inputs: [{ type: "address", name: "owner" }],
-          outputs: [{ type: "uint256" }],
-          stateMutability: "view"
-        },
-        params: [account.address]
-      });
+  try {
+    const balanceResult = await readContract({
+      contract: getContract({
+        client,
+        chain: defineChain(polygon),
+        address: "0x0000000000000000000000000000000000001010"  // ✅ CORRECT ADDRESS
+      }),
+      method: {
+        type: "function",
+        name: "balanceOf",
+        inputs: [{ type: "address", name: "owner" }],
+        outputs: [{ type: "uint256" }],
+        stateMutability: "view"
+      },
+      params: [account.address]
+    });
 
-      const balanceInPOL = Number(balanceResult) / 10**18;
-      const sufficient = balanceInPOL >= requiredAmount;
+    const balanceInPOL = Number(balanceResult) / 10**18;
+    const sufficient = balanceInPOL >= requiredAmount;
 
-      return {
-        sufficient,
-        balance: balanceInPOL.toFixed(4),
-        required: requiredAmount.toFixed(4)
-      };
-    } catch (err) {
-      console.error("Error checking wallet balance:", err);
-      return {
-        sufficient: false,
-        balance: "0",
-        required: requiredAmount.toString(),
-        error: "Failed to check balance"
-      };
-    }
-  };
+    return {
+      sufficient,
+      balance: balanceInPOL.toFixed(4),
+      required: requiredAmount.toFixed(4)
+    };
+  } catch (err) {
+    console.error("Error checking wallet balance:", err);
+    return {
+      sufficient: false,
+      balance: "0",
+      required: requiredAmount.toString(),
+      error: "Failed to check balance"
+    };
+  }
+};
 
-  // Database operation - Following Plan A pattern
+  // Database operation
   const addD1ToDatabase = async (d1Data: any) => {
     try {
       console.log('Sending to D1 API:', d1Data);
@@ -550,7 +571,7 @@ export default function PlanB() {
     }
   };
 
-  // ===== UPDATE handleFirstTransaction WITH BETTER VALIDATION =====
+  // First Transaction
   const handleFirstTransaction = async () => {
     if (!account || !adjustedExchangeRate || !userData) {
       setTransactionError("กรุณาเชื่อมต่อกระเป๋าและรอการโหลดข้อมูล");
@@ -568,7 +589,6 @@ export default function PlanB() {
 
       console.log("Calculated required POL amount:", requiredPolAmount);
 
-      // Check wallet balance before proceeding
       const balanceCheck = await checkWalletBalance(requiredPolAmount);
       if (!balanceCheck.sufficient) {
         throw new Error(`ยอดเงินในกระเป๋าไม่เพียงพอ\nคุณมี: ${balanceCheck.balance} POL\nต้องการ: ${balanceCheck.required} POL`);
@@ -577,12 +597,10 @@ export default function PlanB() {
       const requiredAmountWei = toWei(requiredPolAmount.toString());
       console.log("Amount in wei:", requiredAmountWei.toString());
 
-      // Execute first transaction to recipient
       console.log("Executing transaction to:", RECIPIENT_ADDRESS);
       const firstTransaction = await executeTransaction(RECIPIENT_ADDRESS, requiredAmountWei);
       
       if (!firstTransaction.success) {
-        // More user-friendly error messages
         let errorMessage = firstTransaction.error;
         if (errorMessage.includes("insufficient funds")) {
           errorMessage = `ยอดเงินไม่เพียงพอ\nคุณมี: ${balanceCheck.balance} POL\nต้องการ: ${balanceCheck.required} POL`;
@@ -598,7 +616,6 @@ export default function PlanB() {
       setFirstTxHash(firstTransaction.transactionHash!);
       setTransactionStatus(prev => ({ ...prev, firstTransaction: true }));
       
-      // Close first modal and open second modal
       setShowFirstConfirmationModal(false);
       setShowSecondConfirmationModal(true);
 
@@ -610,7 +627,7 @@ export default function PlanB() {
     }
   };
 
-  // ===== MODIFY handleSecondTransaction TO ADD KTDFI TRANSACTION =====
+  // Second Transaction
   const handleSecondTransaction = async () => {
     if (!account || !adjustedExchangeRate || !userData || !firstTxHash) return;
     
@@ -621,7 +638,6 @@ export default function PlanB() {
       const referrerAddress = getValidReferrerAddress();
       let secondTransactionHash = "";
 
-      // Execute second transaction to referrer if valid address exists
       if (referrerAddress) {
         const minimumAmountWei = toWei(MINIMUM_PAYMENT.toString());
         const secondTransaction = await executeTransaction(referrerAddress, minimumAmountWei);
@@ -635,7 +651,6 @@ export default function PlanB() {
         }
       }
 
-      // Close second modal and open third modal for KTDFI
       setShowSecondConfirmationModal(false);
       setShowThirdConfirmationModal(true);
 
@@ -647,7 +662,7 @@ export default function PlanB() {
     }
   };
 
-  // ===== ADD NEW handleThirdTransaction FUNCTION =====
+  // Third Transaction (KTDFI to member)
   const handleThirdTransaction = async () => {
     if (!account || !firstTxHash || !ktdfiSenderAccount) return;
     
@@ -657,7 +672,6 @@ export default function PlanB() {
     try {
       let thirdTransactionHash = "";
 
-      // Execute third transaction (KTDFI token transfer to D1 member)
       const thirdTransaction = await executeKTDFITransaction(account.address, KTDFI_AMOUNT_D1_MEMBER, ktdfiSenderAccount, false);
       
       if (!thirdTransaction.success) {
@@ -669,15 +683,12 @@ export default function PlanB() {
         setTransactionStatus(prev => ({ ...prev, thirdTransaction: true }));
       }
 
-      // Close third modal and open fourth modal for referrer bonus
       setShowThirdConfirmationModal(false);
       
-      // Check if user has a valid referrer for the fourth transaction
       const referrerAddress = getValidReferrerAddress();
       if (referrerAddress) {
         setShowFourthConfirmationModal(true);
       } else {
-        // If no referrer, skip to database update
         await handleDatabaseUpdate(thirdTransactionHash, "");
       }
 
@@ -689,7 +700,7 @@ export default function PlanB() {
     }
   };
   
-  // ===== ADD NEW handleFourthTransaction FUNCTION =====
+  // Fourth Transaction (KTDFI to referrer)
   const handleFourthTransaction = async () => {
     if (!account || !ktdfiSenderAccount) return;
     
@@ -702,7 +713,6 @@ export default function PlanB() {
       let fourthTransactionError = "";
 
       if (referrerAddress) {
-        // Execute fourth transaction (KTDFI token transfer to referrer as bonus)
         const fourthTransaction = await executeKTDFITransaction(referrerAddress, KTDFI_AMOUNT_D1_REFERRER, ktdfiSenderAccount, true);
         
         if (!fourthTransaction.success) {
@@ -716,7 +726,6 @@ export default function PlanB() {
         }
       }
 
-      // Proceed to database update
       await handleDatabaseUpdate(thirdTxHash, fourthTransactionHash);
 
     } catch (err) {
@@ -727,26 +736,53 @@ export default function PlanB() {
     }
   };
 
-  // ===== ADD NEW handleDatabaseUpdate FUNCTION =====
+  // Database Update for new D1 record
   const handleDatabaseUpdate = async (memberKtdfiTxHash: string, referrerKtdfiTxHash: string) => {
     if (!account || !adjustedExchangeRate) return;
 
     try {
-      // Get current time
       const now = new Date();
       const formattedDate = now.toISOString();
 
       const referrerAddress = getValidReferrerAddress();
+      
+      // Calculate next sequence number
+      const nextSequence = allD1Data.length + 1;
+      
+      // Generate new D1 ID
+      const newD1Id = `D1-${account.address.slice(2, 8).toUpperCase()}-${String(nextSequence).padStart(3, '0')}`;
+      
+      // Calculate bonus to use for this transaction
+      const bonusToUse = calculateBonusToUse();
+      const requiredPolAmount = calculateRequiredPolAmount() || 0;
+      const requiredPolFor800THB = MEMBERSHIP_FEE_THB / adjustedExchangeRate;
+      
+      let actualPaid = requiredPolAmount;
+      
+      if (bonusToUse >= requiredPolFor800THB) {
+        actualPaid = MINIMUM_PAYMENT;
+      } else {
+        actualPaid = Math.max(MINIMUM_PAYMENT, requiredPolFor800THB - bonusToUse);
+      }
 
-      // Prepare D1 data with both KTDFI transactions
+      // Calculate total used bonus (cumulative)
+      const totalUsedBonusCumulative = allD1Data.reduce((sum, d1) => 
+        sum + (Number(d1.used_bonus_pol) || 0), 0
+      ) + bonusToUse;
+
+      // Prepare D1 data
       const newD1Data = {
         user_id: account.address,
-        rate_thb_pol: parseFloat(adjustedExchangeRate?.toFixed(4) || "0"),
-        append_pol: parseFloat(calculateRequiredPolAmount()?.toFixed(4) || "0"),
+        rate_thb_pol: parseFloat(adjustedExchangeRate.toFixed(4)),
+        append_pol: parseFloat(actualPaid.toFixed(4)),
+        used_bonus_pol: parseFloat(bonusToUse.toFixed(4)),
         append_pol_tx_hash: firstTxHash,
         append_pol_date_time: formattedDate,
+        d1_id: newD1Id,
+        d1_sequence: nextSequence,
         remark: {
-          net_bonus_used: totalBonus * 0.05,
+          net_bonus_used: bonusToUse,
+          total_bonus_used_cumulative: totalUsedBonusCumulative,
           referrer_transaction: referrerAddress ? {
             amount: MINIMUM_PAYMENT,
             tx_hash: secondTxHash,
@@ -778,21 +814,30 @@ export default function PlanB() {
           total_amount_thb: MEMBERSHIP_FEE_THB,
           config_source: GITHUB_CONFIG_URL,
           exchange_rate_buffer: exchangeRateConfig.exchangeRateBuffer,
-          timestamp: formattedDate
+          timestamp: formattedDate,
+          d1_count: nextSequence
         }
       };
 
-      // Save to database
       console.log('Adding D1 data to database...');
       const dbResult = await addD1ToDatabase(newD1Data);
       
       if (dbResult && dbResult.user_id) {
-        setD1Data(dbResult);
+        // Refresh D1 data
+        const d1Response = await fetch(`/api/d1?user_id=${account.address}&all=true`);
+        if (d1Response.ok) {
+          const updatedD1Data = await d1Response.json();
+          const sortedD1Data = updatedD1Data.sort((a: D1Data, b: D1Data) => 
+            (b.d1_sequence || 0) - (a.d1_sequence || 0)
+          );
+          setAllD1Data(sortedD1Data);
+        }
+        
         setIsTransactionComplete(true);
         setShowFourthConfirmationModal(false);
         
-        // Redirect to user page after successful completion
-        router.push(`/plan-b/${account.address}`);
+        alert(`สมัคร D1 ครั้งที่ ${nextSequence} สำเร็จ! D1 ID: ${newD1Id}`);
+        
       } else {
         throw new Error('Failed to save to database');
       }
@@ -803,23 +848,39 @@ export default function PlanB() {
     }
   };
 
-  // ===== ADD handleCloseFourthModal FUNCTION =====
+  // Modal close handlers
+  const handleCloseFirstModal = () => {
+    if (transactionStatus.firstTransaction) return;
+    setShowFirstConfirmationModal(false);
+    setTransactionError(null);
+  };
+
+  const handleCloseSecondModal = () => {
+    if (transactionStatus.secondTransaction) return;
+    setShowSecondConfirmationModal(false);
+    setTransactionError(null);
+  };
+
+  const handleCloseThirdModal = () => {
+    if (transactionStatus.thirdTransaction) return;
+    setShowThirdConfirmationModal(false);
+    setTransactionError(null);
+  };
+
   const handleCloseFourthModal = () => {
-    if (transactionStatus.fourthTransaction) {
-      return; // Don't allow closing if transaction is completed
-    }
+    if (transactionStatus.fourthTransaction) return;
     setShowFourthConfirmationModal(false);
     setTransactionError(null);
   };
 
-  // ===== ADD THIS HELPER FUNCTION =====
+  // KTDFI Transaction Helper
   const executeKTDFITransaction = async (to: string, amount: string, ktdfiSenderAccount: any, isReferrerBonus: boolean = false) => {
     try {
       if (!ktdfiSenderAccount) {
         throw new Error("KTDFI sender account not initialized");
       }
 
-      // Check KTDFI balance first
+      // Check KTDFI balance
       const ktdfiBalance = await readContract({
         contract: getContract({
           client,
@@ -844,7 +905,6 @@ export default function PlanB() {
 
       console.log(`Sending ${amount} KTDFI from ${KTDFI_SENDER_ADDRESS} to ${to} ${isReferrerBonus ? '(Referrer Bonus)' : '(Member Bonus)'}`);
 
-      // KTDFI is an ERC-20 token
       const transaction = prepareContractCall({
         contract: getContract({
           client,
@@ -877,33 +937,7 @@ export default function PlanB() {
     }
   };
 
-  // Modal handlers - Following Plan A pattern
-  const handleCloseFirstModal = () => {
-    if (transactionStatus.firstTransaction) {
-      return; // Don't allow closing if transaction is completed
-    }
-    setShowFirstConfirmationModal(false);
-    setTransactionError(null);
-  };
-
-  const handleCloseSecondModal = () => {
-    if (transactionStatus.secondTransaction) {
-      return; // Don't allow closing if transaction is completed
-    }
-    setShowSecondConfirmationModal(false);
-    setTransactionError(null);
-  };
-
-  // ===== ADD handleCloseThirdModal FUNCTION =====
-  const handleCloseThirdModal = () => {
-    if (transactionStatus.thirdTransaction) {
-      return; // Don't allow closing if transaction is completed
-    }
-    setShowThirdConfirmationModal(false);
-    setTransactionError(null);
-  };
-
-  // Bonus data and calculations
+  // Fetch bonus data
   const fetchBonusData = async () => {
     if (!account?.address) {
       console.log("No account address for fetching bonus data");
@@ -920,7 +954,6 @@ export default function PlanB() {
         const responseData = await bonusResponse.json();
         console.log("Full API response:", responseData);
         
-        // Extract the data array from the response
         const bonusDataArray = responseData.data || [];
         console.log("Bonus data array:", bonusDataArray);
         
@@ -939,7 +972,6 @@ export default function PlanB() {
         
         console.log("Processed bonus data:", processedBonusData);
         
-        // Calculate total for debugging
         const total = processedBonusData.reduce((sum, bonus) => 
           sum + (Number(bonus.pr) || 0) + (Number(bonus.cr) || 0) + 
           (Number(bonus.rt) || 0) + (Number(bonus.ar) || 0), 0
@@ -959,23 +991,14 @@ export default function PlanB() {
     }
   };
 
-  // ===== UPDATE THE JOIN BUTTON TO CHECK CONDITIONS =====
-  // In the handleJoinPlanB function, update the error message:
+  // Handle Join Plan B
   const handleJoinPlanB = async () => {
     if (!account) {
       setTransactionError("กรุณาเชื่อมต่อกระเป๋าก่อน");
       return;
     }
 
-    // Check if user already has D1
-    if (isPlanB) {
-      // Update this message to be more consistent with the new display
-      setTransactionError("ท่านเป็นสมาชิก Plan B D1 เรียบร้อยแล้ว");
-      return;
-    }
-
-
-    // Check basic requirements
+    // Always allow joining, even for existing D1 members
     if (!adjustedExchangeRate) {
       setTransactionError("กำลังโหลดอัตราแลกเปลี่ยน กรุณารอสักครู่...");
       return;
@@ -987,7 +1010,15 @@ export default function PlanB() {
       return;
     }
 
-    // Check wallet balance before showing modal
+    // Calculate remaining bonus
+    const remainingBonus = calculateRemainingBonus();
+    
+    // If no remaining bonus and required amount is too high, show error
+    if (remainingBonus <= 0 && requiredPolAmount > (parseFloat(polBalance) || 0)) {
+      setTransactionError("ยอดโบนัสคงเหลือไม่เพียงพอ และยอด POL ในกระเป๋าก็ไม่พอสำหรับการสมัคร");
+      return;
+    }
+
     const balanceCheck = await checkWalletBalance(requiredPolAmount);
     if (!balanceCheck.sufficient) {
       setTransactionError(`ยอดเงินไม่เพียงพอ\nคุณมี: ${balanceCheck.balance} POL\nต้องการ: ${balanceCheck.required} POL`);
@@ -1005,16 +1036,13 @@ export default function PlanB() {
     return /^0x[a-fA-F0-9]{40}$/.test(address);
   };
 
-  // ===== UPDATE getValidReferrerAddress TO BE MORE ROBUST =====
   const getValidReferrerAddress = (): string | null => {
     if (!userData || !userData.referrer_id) return null;
     
     const referrerAddress = userData.referrer_id.trim();
     
-    // Check if it's a valid Ethereum address
     if (!isValidEthereumAddress(referrerAddress)) return null;
     
-    // Check if referrer is not the same as the user
     if (account && referrerAddress.toLowerCase() === account.address.toLowerCase()) {
       console.warn('Referrer address is the same as user address');
       return null;
@@ -1023,12 +1051,10 @@ export default function PlanB() {
     return referrerAddress;
   };
 
-  // Add this helper function near your other format functions
   const formatPOLNumber = (value: number | string | null | undefined): string => {
     if (value === null || value === undefined) return '0.0000';
     
     try {
-      // Convert to number if it's a string
       const numValue = typeof value === 'string' ? parseFloat(value) : value;
       
       if (isNaN(numValue as number)) return '0.0000';
@@ -1040,7 +1066,6 @@ export default function PlanB() {
     }
   };
 
-  // Also update your existing formatNumber function to be more robust
   const formatNumber = (value: number | string | null | undefined): string => {
     if (value === null || value === undefined) return '0.00';
     
@@ -1062,9 +1087,8 @@ export default function PlanB() {
 
   // Calculations
   const isPlanA = userData?.plan_a !== null;
-  const isPlanB = d1Data !== null;
+  const isPlanB = allD1Data.length > 0;
 
-  // FIX: Calculate total bonus based on your schema (pr + cr + rt + ar)
   const totalBonus = bonusData.reduce((total, bonus) => total + 
     (Number(bonus.pr) || 0) + 
     (Number(bonus.cr) || 0) + 
@@ -1072,6 +1096,12 @@ export default function PlanB() {
     (Number(bonus.ar) || 0), 0);
 
   const netBonus = totalBonus * 0.05;
+  const remainingBonus = calculateRemainingBonus();
+
+  // Calculate total used bonus from all D1 records
+  const totalUsedBonus = allD1Data.reduce((sum, d1) => 
+    sum + (Number(d1.used_bonus_pol) || 0), 0
+  );
 
   return (
     <main className="p-4 pb-10 min-h-[100vh] flex flex-col items-center">
@@ -1107,11 +1137,6 @@ export default function PlanB() {
 
         {userData && (
           <div className="flex flex-col items-center justify-center p-5 border border-gray-800 rounded-lg text-[19px] text-center mt-10">
-            {/* REMOVED: The big status message */}
-            {/* <span className={`m-2 text-[22px] font-bold ${isPlanB ? "text-green-600" : "text-red-600"}`}>
-              {isPlanB ? "ท่านเป็นสมาชิก Plan B D1 เรียบร้อยแล้ว" : "ท่านยังไม่ได้เป็นสมาชิก Plan B D1"}
-            </span> */}
-            
             <div className="flex flex-col m-2 text-gray-200 text-[16px] text-left w-full">
               <p className="text-[20px] font-bold text-center mb-3">รายละเอียดสมาชิก</p>
               
@@ -1123,21 +1148,20 @@ export default function PlanB() {
                   <p>อีเมล: {userData.email || 'ไม่มีข้อมูล'}</p>
                   <p>ชื่อ: {userData.name || 'ไม่มีข้อมูล'}</p>
                   <p>เข้า Plan A: {isPlanA ? "✅ ใช่" : "❌ ไม่ใช่"}</p>
-                  {/* ADD THIS: Plan B status */}
-                    <div className="flex items-start gap-2">
-                      <p className={`font-semibold ${isPlanB ? "text-green-400" : "text-red-400"} pt-1`}>
-                        เข้า Plan B D1: {isPlanB ? "✅ ใช่" : "❌ ไม่ใช่"}
-                      </p>
-                      {isPlanB && d1Data && (
-                        <button
-                          onClick={() => setShowD1DetailsModal(true)}
-                          className="text-s bg-emerald-600 hover:bg-emerald-800 text-white ml-2 hover:text-lime-300 px-2 py-1 rounded transition-colors mt-0.6"
-                          title="แสดงรายละเอียด"
-                        >
-                          รายละเอียด
-                        </button>
-                      )}
-                    </div>
+                  <div className="flex items-start gap-2">
+                    <p className={`font-semibold ${isPlanB ? "text-green-400" : "text-red-400"} pt-1`}>
+                      เข้า Plan B D1: {isPlanB ? `✅ ใช่ (${allD1Data.length} ครั้ง)` : "❌ ไม่ใช่"}
+                    </p>
+                    {isPlanB && allD1Data.length > 0 && (
+                      <button
+                        onClick={() => setShowD1DetailsModal(true)}
+                        className="text-s bg-emerald-600 hover:bg-emerald-800 text-white ml-2 hover:text-lime-300 px-2 py-1 rounded transition-colors mt-0.6"
+                        title="แสดงรายละเอียด"
+                      >
+                        รายละเอียด ({allD1Data.length})
+                      </button>
+                    )}
+                  </div>
                   <p>PR by: {formatAddressForDisplay(userData.referrer_id)}</p>
                 </div>
               </div>
@@ -1146,7 +1170,7 @@ export default function PlanB() {
               <div className="mb-4 p-3 bg-purple-900 rounded-lg">
                 <p className="font-semibold mb-2">ข้อมูลโบนัส:</p>
                 
-                {/* Current Bonus from bonus table */}
+                {/* Current Bonus */}
                 <div className="mb-3">
                   <p className="text-sm text-gray-300">โบนัสสะสมปัจจุบัน:</p>
                   <div className="grid grid-cols-2 gap-1 text-sm">
@@ -1154,32 +1178,25 @@ export default function PlanB() {
                     <div className="text-right">{formatNumber(totalBonus)} POL</div>
                     
                     <div>5% ที่ใช้ได้:</div>
-                    <div className="text-right">{formatNumber(totalBonus * 0.05)} POL</div>
+                    <div className="text-right">{formatNumber(netBonus)} POL</div>
                     
-                    {/* Display used bonus from D1 if available */}
-                    {isPlanB && d1Data && (
+                    {isPlanB && (
                       <>
-                        <div>โบนัสที่ใช้ไปแล้ว:</div>
+                        <div>โบนัสที่ใช้ไปแล้วทั้งหมด:</div>
                         <div className="text-right font-bold text-yellow-400">
-                          {formatPOLNumber(d1Data.used_bonus_pol)} POL
+                          {formatPOLNumber(totalUsedBonus)} POL
                         </div>
                         
                         <div>โบนัสคงเหลือ:</div>
                         <div className="text-right font-bold text-green-400">
-                          {formatPOLNumber(
-                            Math.max(0, (totalBonus * 0.05) - 
-                            (typeof d1Data.used_bonus_pol === 'string' 
-                              ? parseFloat(d1Data.used_bonus_pol) 
-                              : (d1Data.used_bonus_pol || 0)
-                            ))
-                          )} POL
+                          {formatPOLNumber(remainingBonus)} POL
                         </div>
                       </>
                     )}
                   </div>
                 </div>
                 
-                {/* Show detailed bonus breakdown if you want */}
+                {/* Show detailed bonus breakdown */}
                 {bonusData.length > 0 && (
                   <div className="mt-3 p-2 bg-gray-800 rounded">
                     <p className="text-sm text-gray-300 mb-1">รายละเอียดโบนัส:</p>
@@ -1213,31 +1230,10 @@ export default function PlanB() {
                   </div>
                 )}
               </div>
-              
-              {/* D1 History if multiple records */}
-              {allD1Data.length > 1 && (
-                <div className="mb-4 p-3 bg-gray-800 rounded-lg">
-                  <p className="font-semibold mb-2">ประวัติการสมัคร D1:</p>
-                  <div className="max-h-40 overflow-y-auto">
-                    {allD1Data.map((d1Record, index) => (
-                      <div key={d1Record.id} className="p-2 mb-2 bg-gray-700 rounded text-sm">
-                        <div className="flex justify-between">
-                          <span>D1 ครั้งที่ {d1Record.d1_sequence || index + 1}</span>
-                          <span>{new Date(d1Record.created_at).toLocaleDateString('th-TH')}</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-300">
-                          <span>โบนัสใช้แล้ว: {formatPOLNumber(d1Record.used_bonus_pol)} POL</span>
-                          <span>จ่ายเพิ่ม: {formatPOLNumber(d1Record.append_pol)} POL</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Exchange Rate Display */}
-            {adjustedExchangeRate && !isPlanB && (
+            {adjustedExchangeRate && (
               <div className="mt-4 text-center">
                 <p className="text-sm text-gray-300">
                   อัตราแลกเปลี่ยนปัจจุบัน: {adjustedExchangeRate.toFixed(4)} THB/POL
@@ -1250,8 +1246,8 @@ export default function PlanB() {
               </div>
             )}
 
-            {/* Join Button Section - Update the text to be clearer */}
-            {!isPlanB && userData && (
+            {/* Join Button Section */}
+            {userData && (
               <div className="w-full mt-6">
                 <button
                   onClick={handleJoinPlanB}
@@ -1260,10 +1256,10 @@ export default function PlanB() {
                 >
                   {!account ? "กรุณาเชื่อมต่อกระเป๋า" : 
                   loading || rateLoading ? "กำลังโหลดข้อมูล..." : 
-                  "ยืนยันเข้าร่วม Plan B D1"}
+                  `สมัคร Plan B D1 ${allD1Data.length > 0 ? `ครั้งที่ ${allD1Data.length + 1}` : ''}`}
                 </button>
                 
-                {/* Error display for join button - Update the message */}
+                {/* Error display for join button */}
                 {transactionError && !showFirstConfirmationModal && (
                   <div className="mt-3 p-2 bg-red-900 border border-red-400 rounded-lg">
                     <p className="text-red-300 text-xs">
@@ -1290,7 +1286,7 @@ export default function PlanB() {
         <WalletPublicKey walletAddress={account?.address || ""}/>
       </div>
 
-      {/* First Confirmation Modal - Following Plan A pattern */}
+      {/* First Confirmation Modal */}
       {showFirstConfirmationModal && (
         <ConfirmModal 
           onClose={handleCloseFirstModal}
@@ -1317,10 +1313,15 @@ export default function PlanB() {
               <div className="mt-4">
                 <p className="font-semibold">ยอดสะสมสุทธิของท่าน:</p>
                 <p className="text-2xl text-green-600 font-bold">
-                  {formatNumber(netBonus)} POL
+                  {formatNumber(remainingBonus)} POL
                 </p>
                 <p className="text-sm text-gray-500">
                   (5% ของโบนัสทั้งหมด: {formatNumber(totalBonus)} POL)
+                  {allD1Data.length > 0 && (
+                    <span className="block text-yellow-400">
+                      ใช้ไปแล้วทั้งหมด: {formatPOLNumber(totalUsedBonus)} POL
+                    </span>
+                  )}
                 </p>
               </div>
 
@@ -1381,7 +1382,7 @@ export default function PlanB() {
         </ConfirmModal>
       )}
 
-      {/* Second Confirmation Modal - For referrer transaction */}
+      {/* Second Confirmation Modal */}
       {showSecondConfirmationModal && (
         <ConfirmModal 
           onClose={handleCloseSecondModal}
@@ -1598,19 +1599,24 @@ export default function PlanB() {
         </ConfirmModal>
       )}
 
-      {/* D1 Details Modal */}
-      {showD1DetailsModal && d1Data && (
+      {/* Enhanced D1 Details Modal with Pagination */}
+      {showD1DetailsModal && allD1Data.length > 0 && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"
           onClick={() => setShowD1DetailsModal(false)}
         >
           <div 
-            className="bg-gray-900 rounded-lg border border-gray-700 max-w-md w-full"
+            className="bg-gray-900 rounded-lg border border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white">ข้อมูลสมาชิก Plan B D1</h3>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">
+                  รายละเอียดสมาชิก Plan B D1 
+                  <span className="ml-2 text-sm text-gray-400">
+                    (ทั้งหมด {allD1Data.length} รายการ)
+                  </span>
+                </h3>
                 <button
                   onClick={() => setShowD1DetailsModal(false)}
                   className="text-gray-400 hover:text-white text-2xl"
@@ -1620,89 +1626,159 @@ export default function PlanB() {
                 </button>
               </div>
               
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="text-gray-400">D1 ID:</div>
-                  <div className="text-right font-bold text-white">
-                    {d1Data.d1_id || 'N/A'}
+              {/* Pagination Controls */}
+              {allD1Data.length > recordsPerPage && (
+                <div className="flex justify-between items-center mb-4">
+                  <div className="text-sm text-gray-400">
+                    แสดง {Math.min((currentD1Page - 1) * recordsPerPage + 1, allD1Data.length)}-
+                    {Math.min(currentD1Page * recordsPerPage, allD1Data.length)} จาก {allD1Data.length} รายการ
                   </div>
-                  
-                  <div className="text-gray-400">ลำดับที่:</div>
-                  <div className="text-right font-bold text-white">
-                    {d1Data.d1_sequence || '1'}
-                  </div>
-                  
-                  <div className="text-gray-400">วันที่สมัคร:</div>
-                  <div className="text-right text-white">
-                    {new Date(d1Data.created_at).toLocaleDateString('th-TH')}
-                  </div>
-                  
-                  <div className="text-gray-400">อัตราแลกเปลี่ยนที่สมัคร:</div>
-                  <div className="text-right text-white">
-                    {formatPOLNumber(d1Data.rate_thb_pol)} THB/POL
-                  </div>
-                  
-                  <div className="text-gray-400">โบนัสที่ใช้แล้ว:</div>
-                  <div className="text-right font-bold text-yellow-400">
-                    {formatPOLNumber(d1Data.used_bonus_pol)} POL
-                  </div>
-                  
-                  <div className="text-gray-400">จ่ายเพิ่ม:</div>
-                  <div className="text-right text-white">
-                    {formatPOLNumber(d1Data.append_pol)} POL
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setCurrentD1Page(prev => Math.max(1, prev - 1))}
+                      disabled={currentD1Page === 1}
+                      className="px-3 py-1 bg-gray-800 rounded disabled:opacity-50"
+                    >
+                      ← ก่อนหน้า
+                    </button>
+                    <span className="px-3 py-1">
+                      หน้า {currentD1Page} จาก {Math.ceil(allD1Data.length / recordsPerPage)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentD1Page(prev => 
+                        Math.min(Math.ceil(allD1Data.length / recordsPerPage), prev + 1)
+                      )}
+                      disabled={currentD1Page >= Math.ceil(allD1Data.length / recordsPerPage)}
+                      className="px-3 py-1 bg-gray-800 rounded disabled:opacity-50"
+                    >
+                      ถัดไป →
+                    </button>
                   </div>
                 </div>
-                
-                {/* Transaction Details if available */}
-                {d1Data.append_pol_tx_hash && (
-                  <div className="mt-4 pt-4 border-t border-gray-700">
-                    <p className="text-gray-400 text-sm mb-2">ข้อมูลธุรกรรม:</p>
-                    <div className="bg-gray-800 p-3 rounded text-xs">
-                      <p className="mb-1">
-                        <span className="text-gray-400">ธุรกรรม:</span>{' '}
-                        <a 
-                          href={`https://polygonscan.com/tx/${d1Data.append_pol_tx_hash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 break-all"
-                        >
-                          {d1Data.append_pol_tx_hash.slice(0, 20)}...
-                        </a>
-                      </p>
-                      {d1Data.append_pol_date_time && (
-                        <p>
-                          <span className="text-gray-400">วันที่:</span>{' '}
-                          {new Date(d1Data.append_pol_date_time).toLocaleString('th-TH')}
-                        </p>
-                      )}
-                    </div>
+              )}
+              
+              {/* D1 Records Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-800">
+                    <tr>
+                      <th className="p-3 text-left">ลำดับที่</th>
+                      <th className="p-3 text-left">D1 ID</th>
+                      <th className="p-3 text-left">วันที่สมัคร</th>
+                      <th className="p-3 text-left">โบนัสที่ใช้</th>
+                      <th className="p-3 text-left">จ่ายเพิ่ม</th>
+                      <th className="p-3 text-left">รายละเอียด</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allD1Data
+                      .slice((currentD1Page - 1) * recordsPerPage, currentD1Page * recordsPerPage)
+                      .map((d1Record) => (
+                        <React.Fragment key={d1Record.id}>
+                          <tr className="border-b border-gray-700 hover:bg-gray-800">
+                            <td className="p-3 font-bold">{d1Record.d1_sequence}</td>
+                            <td className="p-3">{d1Record.d1_id || 'N/A'}</td>
+                            <td className="p-3">
+                              {new Date(d1Record.created_at).toLocaleDateString('th-TH')}
+                            </td>
+                            <td className="p-3 text-yellow-400">
+                              {formatPOLNumber(d1Record.used_bonus_pol)} POL
+                            </td>
+                            <td className="p-3">
+                              {formatPOLNumber(d1Record.append_pol)} POL
+                            </td>
+                            <td className="p-3">
+                              <button
+                                onClick={() => setExpandedD1Id(
+                                  expandedD1Id === d1Record.id ? null : d1Record.id
+                                )}
+                                className="text-blue-400 hover:text-blue-300"
+                              >
+                                {expandedD1Id === d1Record.id ? '▲ ซ่อน' : '▼ แสดง'}
+                              </button>
+                            </td>
+                          </tr>
+                          {expandedD1Id === d1Record.id && (
+                            <tr>
+                              <td colSpan={6} className="p-4 bg-gray-800">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="text-gray-400">อัตราแลกเปลี่ยน:</p>
+                                    <p className="text-white">{formatPOLNumber(d1Record.rate_thb_pol)} THB/POL</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-400">Append POL TxHash:</p>
+                                    {d1Record.append_pol_tx_hash ? (
+                                      <a 
+                                        href={`https://polygonscan.com/tx/${d1Record.append_pol_tx_hash}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-400 hover:text-blue-300 break-all"
+                                      >
+                                        {d1Record.append_pol_tx_hash.slice(0, 20)}...
+                                      </a>
+                                    ) : (
+                                      <p className="text-gray-500">ไม่มี</p>
+                                    )}
+                                  </div>
+                                  {d1Record.remark && (
+                                    <>
+                                      {d1Record.remark.ktdfi_to_member && (
+                                        <div>
+                                          <p className="text-gray-400">ได้รับ KTDFI:</p>
+                                          <p className="text-green-400">
+                                            {d1Record.remark.ktdfi_to_member.amount} KTDFI
+                                          </p>
+                                        </div>
+                                      )}
+                                      {d1Record.remark.ktdfi_to_referrer && (
+                                        <div>
+                                          <p className="text-gray-400">โบนัสผู้แนะนำ:</p>
+                                          <p className="text-green-400">
+                                            {d1Record.remark.ktdfi_to_referrer.amount} KTDFI
+                                          </p>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Summary */}
+              <div className="mt-6 p-4 bg-gray-800 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-gray-400 text-sm">จำนวน D1 ทั้งหมด</p>
+                    <p className="text-xl font-bold">{allD1Data.length}</p>
                   </div>
-                )}
-                
-                {/* Remark Details if available */}
-                {d1Data.remark && typeof d1Data.remark === 'object' && (
-                  <div className="mt-4 pt-4 border-t border-gray-700">
-                    <p className="text-gray-400 text-sm mb-2">รายละเอียดเพิ่มเติม:</p>
-                    <div className="bg-gray-800 p-3 rounded text-xs">
-                      {d1Data.remark.ktdfi_to_member && (
-                        <p className="mb-1">
-                          <span className="text-gray-400">ได้รับ KTDFI:</span>{' '}
-                          <span className="text-green-400">
-                            {d1Data.remark.ktdfi_to_member.amount} KTDFI
-                          </span>
-                        </p>
-                      )}
-                      {d1Data.remark.net_bonus_used && (
-                        <p className="mb-1">
-                          <span className="text-gray-400">ใช้โบนัสไป:</span>{' '}
-                          <span className="text-yellow-400">
-                            {formatPOLNumber(d1Data.remark.net_bonus_used)} POL
-                          </span>
-                        </p>
-                      )}
-                    </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">โบนัสใช้แล้วทั้งหมด</p>
+                    <p className="text-xl font-bold text-yellow-400">
+                      {formatPOLNumber(totalUsedBonus)} POL
+                    </p>
                   </div>
-                )}
+                  <div>
+                    <p className="text-gray-400 text-sm">จ่ายเพิ่มทั้งหมด</p>
+                    <p className="text-xl font-bold">
+                      {formatPOLNumber(
+                        allD1Data.reduce((sum, d1) => sum + (Number(d1.append_pol) || 0), 0)
+                      )} POL
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">โบนัสคงเหลือ</p>
+                    <p className="text-xl font-bold text-green-400">
+                      {formatPOLNumber(remainingBonus)} POL
+                    </p>
+                  </div>
+                </div>
               </div>
               
               <div className="mt-6 flex justify-end">
@@ -1725,7 +1801,7 @@ export default function PlanB() {
   )
 }
 
-// WalletPublicKey component (keep as is)
+// WalletPublicKey component
 const WalletPublicKey: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
   const handleCopy = () => {
     const link = `https://dfi.fund/referrer/${walletAddress}`;
