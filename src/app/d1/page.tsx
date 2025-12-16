@@ -1185,10 +1185,10 @@ export default function PlanB() {
                   <p>เลขกระเป๋า: {userData.user_id}</p>
                   <p>อีเมล: {userData.email || 'ไม่มีข้อมูล'}</p>
                   <p>ชื่อ: {userData.name || 'ไม่มีข้อมูล'}</p>
-                  <p>เข้า Plan A: {isPlanA ? "✅ ใช่" : "❌ ไม่ใช่"}</p>
+                  <p>Plan A: {isPlanA ? "✅ เป็นสมาชิกแล้ว" : "❌ ยังไม่เป็นสมาชิก"}</p>
                   <div className="flex items-start gap-2">
                     <p className={`font-semibold ${isPlanB ? "text-green-400" : "text-red-400"} pt-1`}>
-                      เข้า Plan B D1: {isPlanB ? `✅ ใช่ (${allD1Data.length} ครั้ง)` : "❌ ไม่ใช่"}
+                      Plan B D1: {isPlanB ? `✅ เป็นสมาชิกแล้ว (${allD1Data.length} ครั้ง)` : "❌ ยังไม่เป็นสมาชิก"}
                     </p>
                     {isPlanB && allD1Data.length > 0 && (
                       <button
