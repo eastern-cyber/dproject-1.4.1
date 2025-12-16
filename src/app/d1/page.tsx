@@ -49,23 +49,26 @@ interface UserData {
   updated_at: string;
 }
 
+// Update the D1Data interface
 interface D1Data {
   id: number;
   user_id: string;
-  rate_thb_pol: number;
-  append_pol: number;
+  rate_thb_pol: number | string; // Allow string or number
+  append_pol: number | string;
+  used_bonus_pol: number | string; // Add this
   append_pol_tx_hash: string | null;
   append_pol_date_time: string | null;
   remark: any | null;
   created_at: string;
   updated_at: string;
+  d1_id: string | null;
+  d1_sequence: number | null;
 }
 
 interface BonusData {
   id: number;
   user_id: string;
-  pr_a: number;
-  pr_b: number;
+  pr: number;  // Changed from pr_a and pr_b
   cr: number;
   rt: number;
   ar: number;
@@ -98,6 +101,8 @@ export default function PlanB() {
   // State variables - Following Plan A pattern
   const [userData, setUserData] = useState<UserData | null>(null);
   const [d1Data, setD1Data] = useState<D1Data | null>(null);
+  // Add this state near your other state declarations
+  const [allD1Data, setAllD1Data] = useState<D1Data[]>([]);
   const [bonusData, setBonusData] = useState<BonusData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -230,6 +235,7 @@ export default function PlanB() {
   }, [exchangeRateConfig]);
 
   // Fetch user data
+  // In the fetchUserData useEffect, update the D1 fetch section:
   useEffect(() => {
     const fetchUserData = async () => {
       if (!account?.address) {
@@ -256,15 +262,46 @@ export default function PlanB() {
         const userData = await userResponse.json();
         setUserData(userData);
 
-        // Fetch D1 data
+        // Fetch D1 data - GET ALL D1 RECORDS FOR THE USER
         try {
-          const d1Response = await fetch(`/api/d1?user_id=${account.address}`);
+          const d1Response = await fetch(`/api/d1?user_id=${account.address}&get_all=true`);
           if (d1Response.ok) {
-            const d1Data = await d1Response.json();
-            setD1Data(d1Data);
+            const d1DataArray = await d1Response.json();
+            
+            // FIX: Check if the response is an empty array (meaning no D1 records)
+            if (Array.isArray(d1DataArray)) {
+              if (d1DataArray.length > 0) {
+                // If we have D1 records, get the latest (highest d1_sequence)
+                const sortedD1Data = d1DataArray.sort((a, b) => 
+                  (b.d1_sequence || 0) - (a.d1_sequence || 0)
+                );
+                setD1Data(sortedD1Data[0]); // Set the latest D1 record
+                
+                // Also store all D1 records for display
+                setAllD1Data(d1DataArray);
+              } else {
+                // FIX: Empty array means no D1 records found
+                setD1Data(null);
+                setAllD1Data([]);
+              }
+            } else if (d1DataArray && typeof d1DataArray === 'object' && !Array.isArray(d1DataArray)) {
+              // Single record (for backward compatibility with old API)
+              setD1Data(d1DataArray);
+              setAllD1Data([d1DataArray]);
+            } else {
+              // No data found or invalid response
+              setD1Data(null);
+              setAllD1Data([]);
+            }
+          } else {
+            // API returned error, no D1 data
+            setD1Data(null);
+            setAllD1Data([]);
           }
         } catch (d1Error) {
           console.log('No D1 data found or error fetching:', d1Error);
+          setD1Data(null);
+          setAllD1Data([]);
         }
 
       } catch (err) {
@@ -278,6 +315,14 @@ export default function PlanB() {
 
     fetchUserData();
   }, [account?.address]);
+
+  // Fetch bonus data when user data is loaded
+  useEffect(() => {
+    if (userData) {
+      console.log("Fetching bonus data for user:", userData.user_id);
+      fetchBonusData();
+    }
+  }, [userData]);
 
   // Fetch POL balance - Following Plan A pattern
   useEffect(() => {
@@ -857,21 +902,53 @@ export default function PlanB() {
 
   // Bonus data and calculations
   const fetchBonusData = async () => {
-    if (!account?.address) return;
+    if (!account?.address) {
+      console.log("No account address for fetching bonus data");
+      return;
+    }
 
     try {
+      console.log("Fetching bonus data from API for:", account.address);
       const bonusResponse = await fetch(`/api/bonus?user_id=${account.address}`);
+      
+      console.log("Bonus API response status:", bonusResponse.status);
+      
       if (bonusResponse.ok) {
-        const bonusData = await bonusResponse.json();
-        const processedBonusData = bonusData.map((bonus: BonusData) => ({
-          ...bonus,
-          pr_a: Number(bonus.pr_a),
-          pr_b: Number(bonus.pr_b),
-          cr: Number(bonus.cr),
-          rt: Number(bonus.rt),
-          ar: Number(bonus.ar)
+        const responseData = await bonusResponse.json();
+        console.log("Full API response:", responseData);
+        
+        // Extract the data array from the response
+        const bonusDataArray = responseData.data || [];
+        console.log("Bonus data array:", bonusDataArray);
+        
+        const processedBonusData = bonusDataArray.map((bonus: any) => ({
+          id: bonus.id,
+          user_id: bonus.user_id,
+          pr: Number(bonus.pr) || 0,
+          cr: Number(bonus.cr) || 0,
+          rt: Number(bonus.rt) || 0,
+          ar: Number(bonus.ar) || 0,
+          bonus_date: bonus.bonus_date,
+          calculated_at: bonus.calculated_at,
+          created_at: bonus.created_at,
+          updated_at: bonus.updated_at
         }));
+        
+        console.log("Processed bonus data:", processedBonusData);
+        
+        // Calculate total for debugging
+        const total = processedBonusData.reduce((sum, bonus) => 
+          sum + (Number(bonus.pr) || 0) + (Number(bonus.cr) || 0) + 
+          (Number(bonus.rt) || 0) + (Number(bonus.ar) || 0), 0
+        );
+        console.log("Total bonus calculated:", total);
+        
         setBonusData(processedBonusData);
+      } else {
+        console.log("Bonus API returned error:", bonusResponse.status);
+        const errorText = await bonusResponse.text();
+        console.log("Error response:", errorText);
+        setBonusData([]);
       }
     } catch (bonusError) {
       console.error('Error fetching bonus data:', bonusError);
@@ -880,6 +957,7 @@ export default function PlanB() {
   };
 
   // ===== UPDATE THE JOIN BUTTON TO CHECK CONDITIONS =====
+  // In the handleJoinPlanB function, update the error message:
   const handleJoinPlanB = async () => {
     if (!account) {
       setTransactionError("กรุณาเชื่อมต่อกระเป๋าก่อน");
@@ -888,9 +966,11 @@ export default function PlanB() {
 
     // Check if user already has D1
     if (isPlanB) {
+      // Update this message to be more consistent with the new display
       setTransactionError("ท่านเป็นสมาชิก Plan B D1 เรียบร้อยแล้ว");
       return;
     }
+
 
     // Check basic requirements
     if (!adjustedExchangeRate) {
@@ -940,10 +1020,35 @@ export default function PlanB() {
     return referrerAddress;
   };
 
+  // Add this helper function near your other format functions
+  const formatPOLNumber = (value: number | string | null | undefined): string => {
+    if (value === null || value === undefined) return '0.0000';
+    
+    try {
+      // Convert to number if it's a string
+      const numValue = typeof value === 'string' ? parseFloat(value) : value;
+      
+      if (isNaN(numValue as number)) return '0.0000';
+      
+      return (numValue as number).toFixed(4);
+    } catch (error) {
+      console.error('Error formatting POL number:', error);
+      return '0.0000';
+    }
+  };
+
+  // Also update your existing formatNumber function to be more robust
   const formatNumber = (value: number | string | null | undefined): string => {
     if (value === null || value === undefined) return '0.00';
-    const num = typeof value === 'string' ? parseFloat(value) : value;
-    return isNaN(num) ? '0.00' : num.toFixed(4);
+    
+    try {
+      const num = typeof value === 'string' ? parseFloat(value) : value;
+      if (isNaN(num as number)) return '0.00';
+      
+      return (num as number).toFixed(2);
+    } catch (error) {
+      return '0.00';
+    }
   };
 
   const formatAddressForDisplay = (address: string | null | undefined): string => {
@@ -955,9 +1060,10 @@ export default function PlanB() {
   // Calculations
   const isPlanA = userData?.plan_a !== null;
   const isPlanB = d1Data !== null;
+
+  // FIX: Calculate total bonus based on your schema (pr + cr + rt + ar)
   const totalBonus = bonusData.reduce((total, bonus) => total + 
-    (Number(bonus.pr_a) || 0) + 
-    (Number(bonus.pr_b) || 0) + 
+    (Number(bonus.pr) || 0) + 
     (Number(bonus.cr) || 0) + 
     (Number(bonus.rt) || 0) + 
     (Number(bonus.ar) || 0), 0);
@@ -998,19 +1104,159 @@ export default function PlanB() {
 
         {userData && (
           <div className="flex flex-col items-center justify-center p-5 border border-gray-800 rounded-lg text-[19px] text-center mt-10">
-            <span className={`m-2 text-[22px] font-bold ${isPlanB ? "text-green-600" : "text-red-600"}`}>
+            {/* REMOVED: The big status message */}
+            {/* <span className={`m-2 text-[22px] font-bold ${isPlanB ? "text-green-600" : "text-red-600"}`}>
               {isPlanB ? "ท่านเป็นสมาชิก Plan B D1 เรียบร้อยแล้ว" : "ท่านยังไม่ได้เป็นสมาชิก Plan B D1"}
-            </span>
+            </span> */}
             
-            <div className="flex flex-col m-2 text-gray-200 text-[16px] text-left">
-              <p className="text-[20px] font-bold">รายละเอียดสมาชิก</p>
-              เลขกระเป๋า: {userData.user_id}<br />
-              อีเมล: {userData.email || 'ไม่มีข้อมูล'}<br />
-              ชื่อ: {userData.name || 'ไม่มีข้อมูล'}<br />
-              เข้า Plan A: {isPlanA ? "ใช่" : "ไม่ใช่"}<br />
-              PR by: {formatAddressForDisplay(userData.referrer_id)}<br />
+            <div className="flex flex-col m-2 text-gray-200 text-[16px] text-left w-full">
+              <p className="text-[20px] font-bold text-center mb-3">รายละเอียดสมาชิก</p>
+              
+              {/* User Basic Info */}
+              <div className="mb-4 p-3 bg-gray-800 rounded-lg">
+                <p className="font-semibold mb-2">ข้อมูลพื้นฐาน:</p>
+                <div className="space-y-1">
+                  <p>เลขกระเป๋า: {userData.user_id}</p>
+                  <p>อีเมล: {userData.email || 'ไม่มีข้อมูล'}</p>
+                  <p>ชื่อ: {userData.name || 'ไม่มีข้อมูล'}</p>
+                  <p>เข้า Plan A: {isPlanA ? "✅ ใช่" : "❌ ไม่ใช่"}</p>
+                  {/* ADD THIS: Plan B status */}
+                  <p className={`font-semibold ${isPlanB ? "text-green-400" : "text-red-400"}`}>
+                    เข้า Plan B D1: {isPlanB ? "✅ ใช่" : "❌ ไม่ใช่"}
+                  </p>
+                  <p>PR by: {formatAddressForDisplay(userData.referrer_id)}</p>
+                </div>
+              </div>
+              
+              {/* D1 Membership Info */}
+              {isPlanB && d1Data && (
+                <div className="mb-4 p-3 bg-blue-900 rounded-lg">
+                  <p className="font-semibold mb-2">ข้อมูลสมาชิก Plan B D1:</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>D1 ID:</div>
+                    <div className="text-right font-bold">{d1Data.d1_id || 'N/A'}</div>
+                    
+                    <div>ลำดับที่:</div>
+                    <div className="text-right font-bold">{d1Data.d1_sequence || '1'}</div>
+                    
+                    <div>วันที่สมัคร:</div>
+                    <div className="text-right">
+                      {new Date(d1Data.created_at).toLocaleDateString('th-TH')}
+                    </div>
+                    
+                    <div>อัตราแลกเปลี่ยนที่สมัคร:</div>
+                    <div className="text-right">
+                      {formatPOLNumber(d1Data.rate_thb_pol)} THB/POL
+                    </div>
+                    
+                    <div>โบนัสที่ใช้แล้ว:</div>
+                    <div className="text-right font-bold text-yellow-400">
+                      {formatPOLNumber(d1Data.used_bonus_pol)} POL
+                    </div>
+                    
+                    <div>จ่ายเพิ่ม:</div>
+                    <div className="text-right">
+                      {formatPOLNumber(d1Data.append_pol)} POL
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Bonus Information Section */}
+              <div className="mb-4 p-3 bg-purple-900 rounded-lg">
+                <p className="font-semibold mb-2">ข้อมูลโบนัส:</p>
+                
+                {/* Current Bonus from bonus table */}
+                <div className="mb-3">
+                  <p className="text-sm text-gray-300">โบนัสสะสมปัจจุบัน:</p>
+                  <div className="grid grid-cols-2 gap-1 text-sm">
+                    <div>โบนัสทั้งหมด (PR+CR+RT+AR):</div>
+                    <div className="text-right">{formatNumber(totalBonus)} POL</div>
+                    
+                    <div>5% ที่ใช้ได้:</div>
+                    <div className="text-right">{formatNumber(totalBonus * 0.05)} POL</div>
+                    
+                    {/* Display used bonus from D1 if available */}
+                    {isPlanB && d1Data && (
+                      <>
+                        <div>โบนัสที่ใช้ไปแล้ว:</div>
+                        <div className="text-right font-bold text-yellow-400">
+                          {formatPOLNumber(d1Data.used_bonus_pol)} POL
+                        </div>
+                        
+                        <div>โบนัสคงเหลือ:</div>
+                        <div className="text-right font-bold text-green-400">
+                          {formatPOLNumber(
+                            Math.max(0, (totalBonus * 0.05) - 
+                            (typeof d1Data.used_bonus_pol === 'string' 
+                              ? parseFloat(d1Data.used_bonus_pol) 
+                              : (d1Data.used_bonus_pol || 0)
+                            ))
+                          )} POL
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Show detailed bonus breakdown if you want */}
+                {bonusData.length > 0 && (
+                  <div className="mt-3 p-2 bg-gray-800 rounded">
+                    <p className="text-sm text-gray-300 mb-1">รายละเอียดโบนัส:</p>
+                    <div className="grid grid-cols-2 gap-1 text-xs">
+                      <div>PR:</div>
+                      <div className="text-right">
+                        {formatNumber(bonusData.reduce((sum, bonus) => sum + (Number(bonus.pr) || 0), 0))} POL
+                      </div>
+                      <div>CR:</div>
+                      <div className="text-right">
+                        {formatNumber(bonusData.reduce((sum, bonus) => sum + (Number(bonus.cr) || 0), 0))} POL
+                      </div>
+                      <div>RT:</div>
+                      <div className="text-right">
+                        {formatNumber(bonusData.reduce((sum, bonus) => sum + (Number(bonus.rt) || 0), 0))} POL
+                      </div>
+                      <div>AR:</div>
+                      <div className="text-right">
+                        {formatNumber(bonusData.reduce((sum, bonus) => sum + (Number(bonus.ar) || 0), 0))} POL
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show POL balance */}
+                {account && (
+                  <div className="mt-2 p-2 bg-gray-700 rounded">
+                    <p className="text-sm">
+                      POL ในกระเป๋า: <span className="text-green-400 font-bold">{polBalance} POL</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* D1 History if multiple records */}
+              {allD1Data.length > 1 && (
+                <div className="mb-4 p-3 bg-gray-800 rounded-lg">
+                  <p className="font-semibold mb-2">ประวัติการสมัคร D1:</p>
+                  <div className="max-h-40 overflow-y-auto">
+                    {allD1Data.map((d1Record, index) => (
+                      <div key={d1Record.id} className="p-2 mb-2 bg-gray-700 rounded text-sm">
+                        <div className="flex justify-between">
+                          <span>D1 ครั้งที่ {d1Record.d1_sequence || index + 1}</span>
+                          <span>{new Date(d1Record.created_at).toLocaleDateString('th-TH')}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-300">
+                          <span>โบนัสใช้แล้ว: {formatPOLNumber(d1Record.used_bonus_pol)} POL</span>
+                          <span>จ่ายเพิ่ม: {formatPOLNumber(d1Record.append_pol)} POL</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Exchange Rate Display */}
             {adjustedExchangeRate && !isPlanB && (
               <div className="mt-4 text-center">
                 <p className="text-sm text-gray-300">
@@ -1024,7 +1270,7 @@ export default function PlanB() {
               </div>
             )}
 
-            {/* Join Button Section */}
+            {/* Join Button Section - Update the text to be clearer */}
             {!isPlanB && userData && (
               <div className="w-full mt-6">
                 <button
@@ -1037,7 +1283,7 @@ export default function PlanB() {
                   "ยืนยันเข้าร่วม Plan B D1"}
                 </button>
                 
-                {/* Error display for join button */}
+                {/* Error display for join button - Update the message */}
                 {transactionError && !showFirstConfirmationModal && (
                   <div className="mt-3 p-2 bg-red-900 border border-red-400 rounded-lg">
                     <p className="text-red-300 text-xs">
