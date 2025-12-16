@@ -1142,40 +1142,6 @@ export default function PlanB() {
                 </div>
               </div>
               
-              {/* D1 Membership Info */}
-              {isPlanB && d1Data && (
-                <div className="mb-4 p-3 bg-blue-900 rounded-lg">
-                  <p className="font-semibold mb-2">ข้อมูลสมาชิก Plan B D1:</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>D1 ID:</div>
-                    <div className="text-right font-bold">{d1Data.d1_id || 'N/A'}</div>
-                    
-                    <div>ลำดับที่:</div>
-                    <div className="text-right font-bold">{d1Data.d1_sequence || '1'}</div>
-                    
-                    <div>วันที่สมัคร:</div>
-                    <div className="text-right">
-                      {new Date(d1Data.created_at).toLocaleDateString('th-TH')}
-                    </div>
-                    
-                    <div>อัตราแลกเปลี่ยนที่สมัคร:</div>
-                    <div className="text-right">
-                      {formatPOLNumber(d1Data.rate_thb_pol)} THB/POL
-                    </div>
-                    
-                    <div>โบนัสที่ใช้แล้ว:</div>
-                    <div className="text-right font-bold text-yellow-400">
-                      {formatPOLNumber(d1Data.used_bonus_pol)} POL
-                    </div>
-                    
-                    <div>จ่ายเพิ่ม:</div>
-                    <div className="text-right">
-                      {formatPOLNumber(d1Data.append_pol)} POL
-                    </div>
-                  </div>
-                </div>
-              )}
-              
               {/* Bonus Information Section */}
               <div className="mb-4 p-3 bg-purple-900 rounded-lg">
                 <p className="font-semibold mb-2">ข้อมูลโบนัส:</p>
