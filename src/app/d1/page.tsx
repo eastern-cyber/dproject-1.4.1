@@ -139,11 +139,18 @@ export default function PlanB() {
   // KTDFI Sender State
   const [ktdfiSenderAccount, setKtdfiSenderAccount] = useState<any>(null);
 
-  // D1 Details Modal states
+  // D1 Details Modal States
   const [showD1DetailsModal, setShowD1DetailsModal] = useState(false);
   const [currentD1Page, setCurrentD1Page] = useState(1);
   const [recordsPerPage] = useState(5);
   const [expandedD1Id, setExpandedD1Id] = useState<number | null>(null);
+
+  // Success Modal States
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successData, setSuccessData] = useState<{
+    sequence: number;
+    d1Id: string;
+  } | null>(null);
 
   // Debug logging
   useEffect(() => {
@@ -836,7 +843,12 @@ export default function PlanB() {
         setIsTransactionComplete(true);
         setShowFourthConfirmationModal(false);
         
-        alert(`สมัคร D1 ครั้งที่ ${nextSequence} สำเร็จ! D1 ID: ${newD1Id}`);
+        // ✅ Show success modal instead of alert
+        setSuccessData({
+          sequence: nextSequence,
+          d1Id: newD1Id
+        });
+        setShowSuccessModal(true);
         
       } else {
         throw new Error('Failed to save to database');
@@ -871,6 +883,32 @@ export default function PlanB() {
     if (transactionStatus.fourthTransaction) return;
     setShowFourthConfirmationModal(false);
     setTransactionError(null);
+  };
+
+  // Add this function near your other modal handlers
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
+    setSuccessData(null);
+    
+    // Optionally redirect to user page or refresh data
+    if (account) {
+      // Refresh user data
+      const fetchData = async () => {
+        try {
+          const d1Response = await fetch(`/api/d1?user_id=${account.address}&all=true`);
+          if (d1Response.ok) {
+            const updatedD1Data = await d1Response.json();
+            const sortedD1Data = updatedD1Data.sort((a: D1Data, b: D1Data) => 
+              (b.d1_sequence || 0) - (a.d1_sequence || 0)
+            );
+            setAllD1Data(sortedD1Data);
+          }
+        } catch (error) {
+          console.error('Error refreshing data:', error);
+        }
+      };
+      fetchData();
+    }
   };
 
   // KTDFI Transaction Helper
@@ -1792,6 +1830,106 @@ export default function PlanB() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && successData && (
+        <ConfirmModal 
+          onClose={handleCloseSuccessModal}
+          disableClose={false}
+        >
+          <div className="p-6 bg-gradient-to-br from-green-900 to-emerald-900 rounded-lg border border-emerald-700 max-w-md">
+            <div className="text-center mb-6">
+              {/* Success Icon */}
+              <div className="mx-auto w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              
+              <h3 className="text-2xl font-bold text-white mb-2">
+                สำเร็จแล้ว!
+              </h3>
+              <p className="text-emerald-200 text-lg mb-4">
+                สมัคร Plan B D1 ครั้งที่ {successData.sequence} สำเร็จ
+              </p>
+              
+              {/* D1 ID Card */}
+              <div className="bg-black/30 border border-emerald-500 rounded-lg p-4 mb-6">
+                <p className="text-sm text-emerald-300 mb-1">D1 ID ของคุณ:</p>
+                <p className="text-xl font-bold text-white tracking-wider">
+                  {successData.d1Id}
+                </p>
+              </div>
+              
+              {/* Transaction Summary */}
+              <div className="bg-black/20 rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm text-gray-300 mb-2">สรุปการทำรายการ:</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">ครั้งที่:</span>
+                    <span className="text-white font-bold">#{successData.sequence}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">วันที่สมัคร:</span>
+                    <span className="text-white">{new Date().toLocaleDateString('th-TH')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">อัตราแลกเปลี่ยน:</span>
+                    <span className="text-white">{adjustedExchangeRate?.toFixed(4)} THB/POL</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">ค่าสมาชิก:</span>
+                    <span className="text-white">{MEMBERSHIP_FEE_THB} THB</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Bonuses Received */}
+              <div className="bg-purple-900/30 border border-purple-500 rounded-lg p-4 mb-6">
+                <p className="text-sm text-purple-300 mb-2">โบนัสที่ได้รับ:</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white">KTDFI Welcome Bonus:</span>
+                    <span className="text-yellow-400 font-bold">10,000 KTDFI</span>
+                  </div>
+                  {getValidReferrerAddress() && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-white">KTDFI Referrer Bonus:</span>
+                      <span className="text-green-400 font-bold">10,000 KTDFI</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Message */}
+              <p className="text-gray-300 text-sm mb-6">
+                ขอแสดงความยินดีที่เข้าร่วม Plan B D1 เรียบร้อยแล้ว<br />
+                คุณสามารถตรวจสอบรายละเอียดได้ที่หน้า "รายละเอียด"
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <button
+                className="w-full px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors"
+                onClick={handleCloseSuccessModal}
+              >
+                ตกลง
+              </button>
+              
+              {/* Optional: View Details Button */}
+              <button
+                className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                onClick={() => {
+                  handleCloseSuccessModal();
+                  setShowD1DetailsModal(true);
+                }}
+              >
+                ดูรายละเอียดทั้งหมด
+              </button>
+            </div>
+          </div>
+        </ConfirmModal>
       )}
 
       <div className='px-1 w-full'>
