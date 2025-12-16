@@ -143,6 +143,9 @@ export default function PlanB() {
   // ADD KTDFI SENDER STATE
   const [ktdfiSenderAccount, setKtdfiSenderAccount] = useState<any>(null);
 
+  // Add this near your other modal states
+  const [showD1DetailsModal, setShowD1DetailsModal] = useState(false);
+
   // Add this at the beginning of your component function, after state declarations
   console.log("Component state:", {
     account: account?.address,
@@ -1121,9 +1124,20 @@ export default function PlanB() {
                   <p>ชื่อ: {userData.name || 'ไม่มีข้อมูล'}</p>
                   <p>เข้า Plan A: {isPlanA ? "✅ ใช่" : "❌ ไม่ใช่"}</p>
                   {/* ADD THIS: Plan B status */}
-                  <p className={`font-semibold ${isPlanB ? "text-green-400" : "text-red-400"}`}>
-                    เข้า Plan B D1: {isPlanB ? "✅ ใช่" : "❌ ไม่ใช่"}
-                  </p>
+                    <div className="flex items-start gap-2">
+                      <p className={`font-semibold ${isPlanB ? "text-green-400" : "text-red-400"} pt-1`}>
+                        เข้า Plan B D1: {isPlanB ? "✅ ใช่" : "❌ ไม่ใช่"}
+                      </p>
+                      {isPlanB && d1Data && (
+                        <button
+                          onClick={() => setShowD1DetailsModal(true)}
+                          className="text-s bg-emerald-600 hover:bg-emerald-800 text-white ml-2 hover:text-lime-300 px-2 py-1 rounded transition-colors mt-0.6"
+                          title="แสดงรายละเอียด"
+                        >
+                          รายละเอียด
+                        </button>
+                      )}
+                    </div>
                   <p>PR by: {formatAddressForDisplay(userData.referrer_id)}</p>
                 </div>
               </div>
@@ -1616,6 +1630,126 @@ export default function PlanB() {
             </div>
           </div>
         </ConfirmModal>
+      )}
+
+      {/* D1 Details Modal */}
+      {showD1DetailsModal && d1Data && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowD1DetailsModal(false)}
+        >
+          <div 
+            className="bg-gray-900 rounded-lg border border-gray-700 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white">ข้อมูลสมาชิก Plan B D1</h3>
+                <button
+                  onClick={() => setShowD1DetailsModal(false)}
+                  className="text-gray-400 hover:text-white text-2xl"
+                  aria-label="ปิด"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="text-gray-400">D1 ID:</div>
+                  <div className="text-right font-bold text-white">
+                    {d1Data.d1_id || 'N/A'}
+                  </div>
+                  
+                  <div className="text-gray-400">ลำดับที่:</div>
+                  <div className="text-right font-bold text-white">
+                    {d1Data.d1_sequence || '1'}
+                  </div>
+                  
+                  <div className="text-gray-400">วันที่สมัคร:</div>
+                  <div className="text-right text-white">
+                    {new Date(d1Data.created_at).toLocaleDateString('th-TH')}
+                  </div>
+                  
+                  <div className="text-gray-400">อัตราแลกเปลี่ยนที่สมัคร:</div>
+                  <div className="text-right text-white">
+                    {formatPOLNumber(d1Data.rate_thb_pol)} THB/POL
+                  </div>
+                  
+                  <div className="text-gray-400">โบนัสที่ใช้แล้ว:</div>
+                  <div className="text-right font-bold text-yellow-400">
+                    {formatPOLNumber(d1Data.used_bonus_pol)} POL
+                  </div>
+                  
+                  <div className="text-gray-400">จ่ายเพิ่ม:</div>
+                  <div className="text-right text-white">
+                    {formatPOLNumber(d1Data.append_pol)} POL
+                  </div>
+                </div>
+                
+                {/* Transaction Details if available */}
+                {d1Data.append_pol_tx_hash && (
+                  <div className="mt-4 pt-4 border-t border-gray-700">
+                    <p className="text-gray-400 text-sm mb-2">ข้อมูลธุรกรรม:</p>
+                    <div className="bg-gray-800 p-3 rounded text-xs">
+                      <p className="mb-1">
+                        <span className="text-gray-400">ธุรกรรม:</span>{' '}
+                        <a 
+                          href={`https://polygonscan.com/tx/${d1Data.append_pol_tx_hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 break-all"
+                        >
+                          {d1Data.append_pol_tx_hash.slice(0, 20)}...
+                        </a>
+                      </p>
+                      {d1Data.append_pol_date_time && (
+                        <p>
+                          <span className="text-gray-400">วันที่:</span>{' '}
+                          {new Date(d1Data.append_pol_date_time).toLocaleString('th-TH')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Remark Details if available */}
+                {d1Data.remark && typeof d1Data.remark === 'object' && (
+                  <div className="mt-4 pt-4 border-t border-gray-700">
+                    <p className="text-gray-400 text-sm mb-2">รายละเอียดเพิ่มเติม:</p>
+                    <div className="bg-gray-800 p-3 rounded text-xs">
+                      {d1Data.remark.ktdfi_to_member && (
+                        <p className="mb-1">
+                          <span className="text-gray-400">ได้รับ KTDFI:</span>{' '}
+                          <span className="text-green-400">
+                            {d1Data.remark.ktdfi_to_member.amount} KTDFI
+                          </span>
+                        </p>
+                      )}
+                      {d1Data.remark.net_bonus_used && (
+                        <p className="mb-1">
+                          <span className="text-gray-400">ใช้โบนัสไป:</span>{' '}
+                          <span className="text-yellow-400">
+                            {formatPOLNumber(d1Data.remark.net_bonus_used)} POL
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowD1DetailsModal(false)}
+                  className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                >
+                  ปิด
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className='px-1 w-full'>
