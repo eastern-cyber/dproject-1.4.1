@@ -1797,13 +1797,13 @@ export default function PlanB() {
                     <p className="text-xl font-bold">{allD1Data.length}</p>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm">โบนัสใช้แล้วทั้งหมด</p>
+                    <p className="text-gray-400 text-sm">ยอดสะสมใช้แล้วทั้งหมด</p>
                     <p className="text-xl font-bold text-yellow-400">
                       {formatPOLNumber(totalUsedBonus)} POL
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm">จ่ายเพิ่มทั้งหมด</p>
+                    <p className="text-gray-400 text-sm">ยอดจ่ายเพิ่มทั้งหมด</p>
                     <p className="text-xl font-bold">
                       {formatPOLNumber(
                         allD1Data.reduce((sum, d1) => sum + (Number(d1.append_pol) || 0), 0)
@@ -1811,7 +1811,7 @@ export default function PlanB() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm">โบนัสคงเหลือ</p>
+                    <p className="text-gray-400 text-sm">ยอดสะสมคงเหลือ</p>
                     <p className="text-xl font-bold text-green-400">
                       {formatPOLNumber(remainingBonus)} POL
                     </p>
