@@ -49,7 +49,7 @@ export default function Footer() {
                 <Link href="https://www.instagram.com/kokkokkok.3k?igsh=emNrZ2tta2drdzV2" target="_blank" aria-label="Instagram"><Instagram className="w-6 h-6 hover:text-orange-500" /></Link>
                 <Link href="https://lin.ee/xGUnJcK" target="_blank" aria-label="Line App"><span className="text-[22px] font-bold hover:text-yellow-400">Line</span></Link>
               </div>
-              <Link target="_blank" href="https://3k.dfi.fund/templates/index.html"><p className="text-[20px] font-bold mt-4"><span className="text-red-500">Kok</span><span className="text-yellow-500">Kok</span><span className="text-green-500">Kok</span><sup className="text-[10px] font-bold">TM</sup></p></Link>
+              <Link target="_blank" href="https://3k214.dfi.fund/templates/index.html"><p className="text-[20px] font-bold mt-4"><span className="text-red-500">Kok</span><span className="text-yellow-500">Kok</span><span className="text-green-500">Kok</span><sup className="text-[10px] font-bold">TM</sup></p></Link>
               <p className={theme === 'dark' ? 'bg-[#040444] text-amber-100' : 'bg-amber-50 text-gray-900'}><b>Web3 SuperApp</b> for the Future.</p>
                 <div className="flex items-center mt-2 cursor-pointer" onClick={toggleTheme}>
                   {theme === 'light' ? (
