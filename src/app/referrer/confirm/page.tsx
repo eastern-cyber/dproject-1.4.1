@@ -46,14 +46,14 @@ const MEMBERSHIP_OPTIONS = [
     name: 'Special 1',
     thb: 4000,
     description: '',
-    ktdfiBonus: 50000
+    ktdfiBonus: 500000
   },
   {
     id: 'buoyant',
     name: 'Special 2',
     thb: 8000,
     description: '',
-    ktdfiBonus: 120000
+    ktdfiBonus: 1200000
   }
 ];
 
