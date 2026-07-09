@@ -139,7 +139,7 @@ const Timeline: React.FC = () => {
             <div className="timeline-item">
                 <div className="timeline-content">
                 <ul><b>15.07.2025</b></ul>
-                <h3><Link target="_blank" href="https://3k.dfi.fund/templates/index.html/"><b>Kok Kok Kok v. 2.0.1</b></Link></h3>
+                <h3><Link target="_blank" href="https://3k.dfi.fund/templates/index.html/"><b>KokKokKok v. 2.0.1</b></Link></h3>
                 <p><Link target="_blank" href="https://3k.dfi.fund/templates/index.html/">ต้นแบบแอพพลิเคชั่น ก๊อกๆๆ เวอร์ชั่น 2.0.1</Link></p>
                 </div>
             </div>                      
