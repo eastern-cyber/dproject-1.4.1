@@ -27,7 +27,7 @@ const GITHUB_CONFIG_URL = "https://raw.githubusercontent.com/eastern-cyber/dproj
 
 // Default values in case GitHub fetch fails
 const DEFAULT_CONFIG = {
-  fallbackExchangeRate: 3.97,
+  fallbackExchangeRate: 2.5,
   exchangeRateBuffer: 0,
   refreshInterval: 300000 // 5 minutes
 };
